@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wayfinder Ecosystem — Ship With Process</title>
+<!-- Aesthetic: engineering-blueprint -->
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a1628;--surface:#0d1f3c;--grid:rgba(100,180,255,.08);
+  --accent:#ff6b35;--accent2:#00e5ff;--accent3:#ffd600;
+  --text:#e8f0fe;--text-dim:#8aa4c0;--mono:'Fira Code',monospace;
+}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;600&display=swap');
+body{
+  font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  line-height:1.6;overflow:hidden;
+}
+.deck{height:100dvh;overflow-y:auto;scroll-snap-type:y mandatory;scroll-behavior:smooth}
+.slide{
+  height:100dvh;scroll-snap-align:start;overflow:hidden;position:relative;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:clamp(40px,6vh,80px) clamp(40px,8vw,120px);
+  isolation:isolate;
+}
+/* Grid background */
+.slide::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+.slide>*{position:relative;z-index:1}
+
+.slide__display{
+  font-size:clamp(48px,10vw,120px);font-weight:800;letter-spacing:-3px;
+  line-height:.95;text-wrap:balance;
+}
+.slide__heading{
+  font-size:clamp(28px,5vw,48px);font-weight:700;letter-spacing:-1px;
+  line-height:1.1;text-wrap:balance;
+}
+.slide__body{
+  font-size:clamp(16px,2.2vw,24px);line-height:1.6;text-wrap:pretty;
+}
+.slide__label{
+  font-family:var(--mono);font-size:clamp(10px,1.2vw,14px);font-weight:600;
+  text-transform:uppercase;letter-spacing:2px;
+}
+
+/* Accent bars */
+.accent-bar{width:80px;height:4px;background:var(--accent);border-radius:2px;margin-bottom:1.5rem}
+.accent-bar--cyan{background:var(--accent2)}
+.accent-bar--gold{background:var(--accent3)}
+
+/* Title slide */
+.slide--title{text-align:center;align-items:center}
+.slide--title .slide__display{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.slide--title .subtitle{
+  font-size:clamp(18px,3vw,32px);color:var(--text-dim);margin-top:1rem;
+  font-weight:400;max-width:600px;
+}
+
+/* Section divider */
+.slide--section{justify-content:center}
+.slide--section .slide__display{
+  font-size:clamp(36px,7vw,72px);
+}
+
+/* Content slides */
+.slide--content{gap:2rem}
+.slide--content ul{
+  list-style:none;padding-left:1.5rem;
+}
+.slide--content ul li{
+  position:relative;padding-left:1.5rem;margin-bottom:.75rem;
+}
+.slide--content ul li::before{
+  content:'›';position:absolute;left:0;color:var(--accent);font-weight:800;
+}
+
+/* Comparison */
+.slide--comparison{
+  flex-direction:row;gap:2rem;align-items:stretch;
+}
+.comparison-col{
+  flex:1;display:flex;flex-direction:column;gap:1rem;
+  padding:2rem;border:1px solid var(--grid);border-radius:8px;
+  background:rgba(13,31,60,.6);
+}
+.comparison-col.wrong{border-color:#ff4444}
+.comparison-col.right{border-color:#44ff88}
+.comparison-col h3{
+  font-size:clamp(20px,3vw,28px);font-weight:700;
+}
+.comparison-col.wrong h3{color:#ff4444}
+.comparison-col.right h3{color:#44ff88}
+
+/* Code slide */
+.slide--code{
+  align-items:center;justify-content:center;
+}
+.code-block{
+  background:#000;border:1px solid var(--grid);border-radius:8px;
+  padding:2rem;font-family:var(--mono);font-size:clamp(12px,1.5vw,16px);
+  line-height:1.8;overflow-x:auto;max-width:800px;width:100%;
+}
+.code-block .kw{color:var(--accent2)}
+.code-block .str{color:var(--accent3)}
+.code-block .cmt{color:var(--text-dim)}
+
+/* Diagram slide */
+.slide--diagram{
+  align-items:center;justify-content:center;gap:2rem;
+}
+.diagram{
+  display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;
+  max-width:1000px;
+}
+.diagram-step{
+  background:var(--surface);border:1px solid var(--grid);border-radius:8px;
+  padding:1.5rem;min-width:140px;text-align:center;
+  font-size:clamp(12px,1.4vw,16px);
+}
+.diagram-step .step-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:50%;
+  background:var(--accent);color:#fff;font-weight:800;font-size:14px;
+  margin-bottom:.5rem;
+}
+.diagram-arrow{
+  color:var(--accent);font-size:24px;display:flex;align-items:center;
+}
+
+/* Table */
+.slide--table{align-items:center}
+table{
+  width:100%;max-width:900px;border-collapse:collapse;
+}
+th,td{
+  padding:1rem 1.5rem;text-align:left;border-bottom:1px solid var(--grid);
+  font-size:clamp(12px,1.4vw,16px);
+}
+th{
+  font-weight:700;color:var(--accent2);font-size:clamp(10px,1.2vw,14px);
+  text-transform:uppercase;letter-spacing:1px;position:sticky;top:0;
+  background:var(--bg);z-index:2;
+}
+td:first-child{font-family:var(--mono);color:var(--accent3);font-size:clamp(11px,1.2vw,14px)}
+
+/* Closing */
+.slide--closing{text-align:center;align-items:center}
+.slide--closing .slide__display{
+  background:linear-gradient(135deg,var(--accent3),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.cta{
+  margin-top:2rem;padding:1rem 2rem;border:2px solid var(--accent);
+  border-radius:8px;font-size:clamp(16px,2vw,24px);color:var(--accent);
+  text-decoration:none;display:inline-block;font-weight:700;
+  transition:background .2s,color .2s;cursor:pointer;
+}
+.cta:hover{background:var(--accent);color:#fff}
+
+/* Progress */
+.progress{
+  position:fixed;top:0;left:0;right:0;height:3px;z-index:100;
+  background:var(--grid);
+}
+.progress__bar{
+  height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  transition:width .3s;
+}
+
+/* Reveal animations */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* Responsive */
+@media(max-width:768px){
+  .slide--comparison{flex-direction:column}
+  .diagram{flex-direction:column;align-items:center}
+  .diagram-arrow{transform:rotate(90deg)}
+}
+</style>
+</head>
+<body>
+<div class="progress"><div class="progress__bar" id="prog"></div></div>
+<div class="deck">
+
+<!-- SLIDE 1: Title -->
+<section class="slide slide--title">
+  <svg width="60" height="60" viewBox="0 0 60 60" style="margin-bottom:2rem;opacity:.6">
+    <circle cx="30" cy="30" r="28" fill="none" stroke="#00e5ff" stroke-width="1"/>
+    <circle cx="30" cy="30" r="18" fill="none" stroke="#ff6b35" stroke-width="1"/>
+    <circle cx="30" cy="30" r="8" fill="none" stroke="#ffd600" stroke-width="1"/>
+    <line x1="30" y1="2" x2="30" y2="12" stroke="#00e5ff" stroke-width="2"/>
+    <line x1="58" y1="30" x2="48" y2="30" stroke="#00e5ff" stroke-width="2"/>
+    <line x1="30" y1="58" x2="30" y2="48" stroke="#00e5ff" stroke-width="2"/>
+    <line x1="2" y1="30" x2="12" y2="30" stroke="#00e5ff" stroke-width="2"/>
+  </svg>
+  <h1 class="slide__display">The Wayfinder Ecosystem</h1>
+  <p class="subtitle">How to ship quality software with AI coding agents — without losing your mind</p>
+</section>
+
+<!-- SLIDE 2: The Problem -->
+<section class="slide slide--content">
+  <span class="slide__label" style="color:var(--accent)">The Problem</span>
+  <h2 class="slide__heading">Raw agents produce chaos</h2>
+  <div class="accent-bar"></div>
+  <p class="slide__body">AI coding agents are incredibly fast. But speed without process amplifies entropy:</p>
+  <ul>
+    <li><strong>Alignment gaps</strong> — you think the agent knows what you want. It doesn't.</li>
+    <li><strong>Misdirection</strong> — agents charge ahead, answer their own questions, and build the wrong thing.</li>
+    <li><strong>Codebase rot</strong> — velocity accelerates software entropy. Ball-of-mud arrives in weeks, not months.</li>
+    <li><strong>No shared language</strong> — every session starts from zero. No glossary, no decisions captured.</li>
+  </ul>
+  <p class="slide__body" style="color:var(--text-dim);margin-top:1rem">More speed × zero process = faster failure.</p>
+</section>
+
+<!-- SLIDE 3: The Answer -->
+<section class="slide slide--content">
+  <span class="slide__label" style="color:var(--accent2)">The Answer</span>
+  <h2 class="slide__heading">Process before code</h2>
+  <div class="accent-bar accent-bar--cyan"></div>
+  <p class="slide__body">The <strong>Wayfinder ecosystem</strong> is a suite of composable agent skills that enforce engineering fundamentals at every stage:</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2rem">
+    <div style="padding:1.5rem;border:1px solid var(--grid);border-radius:8px">
+      <strong style="color:var(--accent)">Align</strong>
+      <p style="color:var(--text-dim);margin-top:.5rem">Grilling + Domain Modeling</p>
+    </div>
+    <div style="padding:1.5rem;border:1px solid var(--grid);border-radius:8px">
+      <strong style="color:var(--accent2)">Plan</strong>
+      <p style="color:var(--text-dim);margin-top:.5rem">Spec + Tickets + Wayfinder</p>
+    </div>
+    <div style="padding:1.5rem;border:1px solid var(--grid);border-radius:8px">
+      <strong style="color:var(--accent3)">Build</strong>
+      <p style="color:var(--text-dim);margin-top:.5rem">Implement + TDD</p>
+    </div>
+    <div style="padding:1.5rem;border:1px solid var(--grid);border-radius:8px">
+      <strong style="color:#44ff88">Ship</strong>
+      <p style="color:var(--text-dim);margin-top:.5rem">Code Review + Debug</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 4: Section — Wayfinder -->
+<section class="slide slide--section">
+  <span class="slide__label" style="color:var(--accent)">Core Concept</span>
+  <h2 class="slide__display">Wayfinder</h2>
+  <div class="accent-bar" style="width:120px"></div>
+  <p class="slide__body" style="color:var(--text-dim);max-width:600px;margin-top:1.5rem">
+    Charting a path through uncertainty — when the destination isn't visible yet.
+  </p>
+</section>
+
+<!-- SLIDE 5: Wayfinder Explained -->
+<section class="slide slide--content">
+  <span class="slide__label">Wayfinder</span>
+  <h2 class="slide__heading">A shared map on your issue tracker</h2>
+  <div class="accent-bar"></div>
+  <p class="slide__body">Wayfinder plans work too big for one agent session. It creates a <strong>single map issue</strong> with child investigation tickets, wired together with <strong>native blocking relationships</strong>.</p>
+  <ul>
+    <li><strong>Destination first</strong> — naming the goal fixes scope and shapes every ticket</li>
+    <li><strong>Plan, don't do</strong> — each ticket resolves a decision; map is done when the route is clear</li>
+    <li><strong>Fog of war</strong> — deliberately incomplete; resolving one ticket clears fog, graduating new tickets</li>
+    <li><strong>Claim by assignment</strong> — assignee is the claim. No labels needed.</li>
+  </ul>
+</section>
+
+<!-- SLIDE 6: Wayfinder Map Structure -->
+<section class="slide slide--code">
+  <span class="slide__label" style="align-self:flex-start">The Map</span>
+  <h3 class="slide__heading" style="margin-top:1rem">Map Body Structure</h3>
+  <div class="code-block">
+<span class="cmt"># The map is a single issue — low-res index</span>
+<span class="kw">##</span> Destination
+Reaching the end of this map means: [1-2 line goal]
+
+<span class="kw">##</span> Notes
+&lt;domain, skills to consult, standing preferences&gt;
+
+<span class="kw">##</span> Decisions so far
+- [Closed ticket](link) — <span class="str">one-line gist of the answer</span>
+
+<span class="kw">##</span> Not yet specified
+Suspected questions the frontier hasn't reached yet
+
+<span class="kw">##</span> Out scope
+Work consciously ruled out for this effort
+  </div>
+</section>
+
+<!-- SLIDE 7: Ticket Types -->
+<section class="slide slide--table">
+  <span class="slide__label" style="align-self:flex-start">Wayfinder</span>
+  <h3 class="slide__heading" style="margin-bottom:2rem">Four Ticket Types</h3>
+  <table>
+    <thead><tr><th>Type</th><th>Mode</th><th>When</th><th>Resolves With</th></tr></thead>
+    <tbody>
+      <tr><td>research</td><td>AFK</td><td>Knowledge needed outside the codebase</td><td>Markdown summary</td></tr>
+      <tr><td>prototype</td><td>HITL</td><td>"How should it look/behave?"</td><td>Concrete artifact + reaction</td></tr>
+      <tr><td>grilling</td><td>HITL</td><td>Default — decisions need human input</td><td>Live conversation</td></tr>
+      <tr><td>task</td><td>Either</td><td>Manual work that unblocks decisions</td><td>Done + facts recorded</td></tr>
+    </tbody>
+  </table>
+  <p class="slide__body" style="color:var(--text-dim);margin-top:1.5rem">
+    <strong>HITL</strong> = Human In the Loop · <strong>AFK</strong> = Agent Fine Keen (alone)
+  </p>
+</section>
+
+<!-- SLIDE 8: Section — The Pipeline -->
+<section class="slide slide--section">
+  <span class="slide__label" style="color:var(--accent2)">The Pipeline</span>
+  <h2 class="slide__display">Grill → Spec → Tickets → Implement</h2>
+  <div class="accent-bar accent-bar--cyan" style="width:160px"></div>
+</section>
+
+<!-- SLIDE 9: Pipeline Diagram -->
+<section class="slide slide--diagram">
+  <span class="slide__label">The Flow</span>
+  <h3 class="slide__heading" style="margin-bottom:2.5rem">From idea to shipped code</h3>
+  <div class="diagram">
+    <div class="diagram-step">
+      <div class="step-num">1</div>
+      <strong>/grill-me</strong><br>
+      <span style="color:var(--text-dim)">Align on what<br>you actually want</span>
+    </div>
+    <div class="diagram-arrow">→</div>
+    <div class="diagram-step">
+      <div class="step-num">2</div>
+      <strong>/to-spec</strong><br>
+      <span style="color:var(--text-dim)">Synthesize into<br>a written spec</span>
+    </div>
+    <div class="diagram-arrow">→</div>
+    <div class="diagram-step">
+      <div class="step-num">3</div>
+      <strong>/to-tickets</strong><br>
+      <span style="color:var(--text-dim)">Break into vertical<br>slices + blockers</span>
+    </div>
+    <div class="diagram-arrow">→</div>
+    <div class="diagram-step">
+      <div class="step-num">4</div>
+      <strong>/implement</strong><br>
+      <span style="color:var(--text-dim)">TDD at seams,<br>CI stays green</span>
+    </div>
+    <div class="diagram-arrow">→</div>
+    <div class="diagram-step">
+      <div class="step-num">5</div>
+      <strong>/code-review</strong><br>
+      <span style="color:var(--text-dim)">Standards + Spec<br>two-axis review</span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 10: Grilling Deep Dive -->
+<section class="slide slide--content">
+  <span class="slide__label" style="color:var(--accent)">The First Gate</span>
+  <h2 class="slide__heading">Grilling: killing misalignment dead</h2>
+  <div class="accent-bar"></div>
+  <p class="slide__body">The #1 failure mode: <em>you think the dev knows what you want. Then you see they built.</em> Same thing happens with AI agents — magnified.</p>
+  <ul>
+    <li><strong>One question at a time</strong> — never bewilder with a list</li>
+    <li><strong>Recommended answer</strong> — each question comes with a suggestion</li>
+    <li><strong>Facts vs decisions</strong> — look up facts in the codebase; ask humans for decisions</li>
+    <li><strong>Walk the design tree</strong> — resolve every branch before building anything</li>
+  </ul>
+  <p class="slide__body" style="color:var(--accent3);margin-top:1rem">Without grilling, every other skill is just faster wrong.</p>
+</section>
+
+<!-- SLIDE 11: Spec + Tickets -->
+<section class="slide slide--comparison">
+  <div class="comparison-col wrong">
+    <h3>❌ Without process</h3>
+    <p class="slide__body">"Build the thing" → agent guesses → wrong thing built → rewrite → context lost → repeat</p>
+    <p style="color:var(--text-dim)">No spec, no tickets, no shared understanding. Every session starts from scratch.</p>
+  </div>
+  <div class="comparison-col right">
+    <h3>✅ With process</h3>
+    <p class="slide__body">Grill → Spec (problem, stories, decisions) → Tickets (vertical slices with blockers) → Implement one at a time</p>
+    <p style="color:var(--text-dim)">Spec lives on the issue tracker. Tickets declare blocking edges. CI stays green batch to batch.</p>
+  </div>
+</section>
+
+<!-- SLIDE 12: Vertical Slices -->
+<section class="slide slide--content">
+  <span class="slide__label" style="color:var(--accent3)">Key Concept</span>
+  <h2 class="slide__heading">Vertical slices beat horizontal layers</h2>
+  <div class="accent-bar accent-bar--gold"></div>
+  <p class="slide__body">Each ticket cuts a <strong>narrow but complete</strong> path through every layer — schema, API, UI, tests. A completed slice is demoable on its own.</p>
+  <ul>
+    <li>Sized to fit in a <strong>single context window</strong></li>
+    <li><strong>Tracer bullets</strong> — thin slice first, then widen</li>
+    <li><strong>Wide refactors</strong> use expand→contract: add new form beside old, migrate in batches, delete old</li>
+  </ul>
+  <p class="slide__body" style="color:var(--text-dim);margin-top:1rem">Horizontal slices (all schema, then all API, then all UI) never produce something you can test.</p>
+</section>
+
+<!-- SLIDE 13: Domain Modeling -->
+<section class="slide slide--content">
+  <span class="slide__label" style="color:var(--accent2)">Foundation</span>
+  <h2 class="slide__heading">Domain Modeling: shared language</h2>
+  <div class="accent-bar accent-bar--cyan"></div>
+  <p class="slide__body">A shared vocabulary makes everything more concise and navigable:</p>
+  <ul>
+    <li><strong>CONTEXT.md</strong> — living glossary at the repo root. Pure terms, no implementation.</li>
+    <li><strong>ADRs</strong> — Architectural Decision Records. Only when: hard to reverse, surprising, real trade-off.</li>
+    <li><strong>Challenge fuzzy language</strong> — "You said 'account' — did you mean Customer or User?"</li>
+    <li><strong>Stress-test with scenarios</strong> — force precision at the boundaries</li>
+  </ul>
+  <p class="slide__body" style="color:var(--accent3);margin-top:1rem">Consistent naming → easier navigation → fewer tokens wasted on disambiguation.</p>
+</section>
+
+<!-- SLIDE 14: Code Review -->
+<section class="slide slide--content">
+  <span class="slide__label">Quality Gate</span>
+  <h2 class="slide__heading">Two-axis code review</h2>
+  <div class="accent-bar"></div>
+  <p class="slide__body">Every change passes through two independent lenses:</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1rem">
+    <div style="padding:1.5rem;border:1px solid var(--accent2);border-radius:8px;background:rgba(0,229,255,.05)">
+      <strong style="color:var(--accent2)">Standards</strong>
+      <p style="color:var(--text-dim);margin-top:.5rem">Does the code follow this repo's conventions, patterns, and style?</p>
+    </div>
+    <div style="padding:1.5rem;border:1px solid var(--accent);border-radius:8px;background:rgba(255,107,53,.05)">
+      <strong style="color:var(--accent)">Spec</strong>
+      <p style="color:var(--text-dim);margin-top:.5rem">Does the code match what the originating issue asked for?</p>
+    </div>
+  </div>
+  <p class="slide__body" style="color:var(--text-dim);margin-top:1rem">One can pass while the other fails. Reporting separately prevents masking.</p>
+</section>
+
+<!-- SLIDE 15: Supporting Skills -->
+<section class="slide slide--table">
+  <span class="slide__label" style="align-self:flex-start">The Full Ecosystem</span>
+  <h3 class="slide__heading" style="margin-bottom:2rem">14+ Skills, Composable</h3>
+  <table>
+    <thead><tr><th>Skill</th><th>Trigger</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>wayfinder</td><td>/wayfinder</td><td>Plan huge work across sessions</td></tr>
+      <tr><td>grill-me</td><td>/grill-me</td><td>Align on what you want</td></tr>
+      <tr><td>to-spec</td><td>/to-spec</td><td>Synthesize spec from conversation</td></tr>
+      <tr><td>to-tickets</td><td>/to-tickets</td><td>Break spec into vertical slices</td></tr>
+      <tr><td>implement</td><td>/implement</td><td>Build one ticket with TDD</td></tr>
+      <tr><td>code-review</td><td>/code-review</td><td>Two-axis review before merge</td></tr>
+      <tr><td>triage</td><td>/triage</td><td>Move issues through states</td></tr>
+      <tr><td>diagnosing-bugs</td><td>/diagnosing-bugs</td><td>Feedback loop → hypothesis → fix</td></tr>
+      <tr><td>domain-modeling</td><td>/domain-modeling</td><td>Sharpen shared vocabulary</td></tr>
+      <tr><td>improve-architecture</td><td>/improve</td><td>Rescue codebase from entropy</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SLIDE 16: The Case -->
+<section class="slide slide--content">
+  <span class="slide__label" style="color:var(--accent3)">The Case</span>
+  <h2 class="slide__heading">Why this beats going raw</h2>
+  <div class="accent-bar accent-bar--gold"></div>
+  <p class="slide__body">Each skill solves a real, expensive failure mode:</p>
+  <ul>
+    <li><strong>Misalignment</strong> → Grilling catches it before code is written</li>
+    <li><strong>Verbosity</strong> → Shared language compresses communication</li>
+    <li><strong>Bugs</strong> → TDD at pre-agreed seams + diagnosing loop</li>
+    <li><strong>Codebase rot</strong> → Architecture reviews every few days</li>
+    <li><strong>Huge projects</strong> → Wayfinder maps the path without doing the work</li>
+  </ul>
+  <p class="slide__body" style="color:var(--accent3);margin-top:1.5rem;font-size:clamp(20px,3vw,32px);font-weight:700">
+    Software engineering fundamentals matter more in the AI age — not less.
+  </p>
+</section>
+
+<!-- SLIDE 17: Closing -->
+<section class="slide slide--closing">
+  <svg width="80" height="80" viewBox="0 0 80 80" style="margin-bottom:2rem">
+    <circle cx="40" cy="40" r="38" fill="none" stroke="#ffd600" stroke-width="2"/>
+    <circle cx="40" cy="40" r="28" fill="none" stroke="#00e5ff" stroke-width="2"/>
+    <circle cx="40" cy="40" r="18" fill="none" stroke="#ff6b35" stroke-width="2"/>
+    <circle cx="40" cy="40" r="8" fill="none" stroke="#ffd600" stroke-width="2"/>
+    <line x1="40" y1="2" x2="40" y2="12" stroke="#ffd600" stroke-width="2"/>
+    <line x1="78" y1="40" x2="68" y2="40" stroke="#ffd600" stroke-width="2"/>
+    <line x1="40" y1="78" x2="40" y2="68" stroke="#ffd600" stroke-width="2"/>
+    <line x1="2" y1="40" x2="12" y2="40" stroke="#ffd600" stroke-width="2"/>
+  </svg>
+  <h1 class="slide__display">Ship with process.</h1>
+  <p class="subtitle" style="margin-top:1.5rem">
+    The Wayfinder ecosystem turns AI agents from chaos machines into disciplined engineering partners.
+  </p>
+  <div class="cta">npx skills@latest add mattpocock/skills</div>
+  <p style="color:var(--text-dim);margin-top:2rem;font-size:clamp(12px,1.4vw,16px)">
+    mattpocock/skills · v1.1.0 · July 2026
+  </p>
+</section>
+
+</div><!-- .deck -->
+
+<script>
+// Progress bar + reveal animations
+const deck = document.querySelector('.deck');
+const prog = document.getElementById('prog');
+const reveals = document.querySelectorAll('.reveal');
+
+function updateProgress() {
+  const max = deck.scrollHeight - deck.clientHeight;
+  prog.style.width = `${(deck.scrollTop / max) * 100}%`;
+}
+
+// Intersection observer for reveals
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) e.target.classList.add('visible');
+  });
+}, { root: deck, threshold: 0.3 });
+reveals.forEach(el => obs.observe(el));
+
+deck.addEventListener('scroll', updateProgress, { passive: true });
+updateProgress();
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+    e.preventDefault(); deck.scrollBy({ top: window.innerHeight, behavior: 'smooth' });
+  }
+  if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+    e.preventDefault(); deck.scrollBy({ top: -window.innerHeight, behavior: 'smooth' });
+  }
+  if (e.key === 'Home') {
+    e.preventDefault(); deck.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  if (e.key === 'End') {
+    e.preventDefault(); deck.scrollTo({ top: deck.scrollHeight, behavior: 'smooth' });
+  }
+});
+</script>
+</body>
+</html>
