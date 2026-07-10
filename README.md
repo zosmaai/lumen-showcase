@@ -1,6 +1,6 @@
 # Lumen Showcase
 
-AI-generated single-file HTML presentations built with [Lumen](https://github.com/the-forge-flow/lumen). Each file is a self-contained, zero-dependency HTML page.
+AI-generated single-file HTML presentations built with [Lumen](https://github.com/MonsieurBarti/lumen). Each file is a self-contained, zero-dependency HTML page.
 
 ## Showcase
 
