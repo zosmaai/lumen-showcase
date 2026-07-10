@@ -5,27 +5,95 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lumen Showcase</title>
 <style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+    --glow: rgba(88, 166, 255, 0.15);
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: system-ui, sans-serif; background: #0d1117; color: #c9d1d9; display: flex; justify-content: center; padding: 4rem 1rem; }
-  .container { max-width: 560px; width: 100%; }
-  h1 { font-size: 1.8rem; margin-bottom: .5rem; }
-  p { color: #8b949e; margin-bottom: 2rem; }
-  ul { list-style: none; }
-  li { margin-bottom: .75rem; }
-  a { color: #58a6ff; text-decoration: none; font-size: 1.1rem; }
-  a:hover { text-decoration: underline; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 3rem 1rem;
+  }
+  .header {
+    text-align: center;
+    max-width: 640px;
+    margin-bottom: 3rem;
+  }
+  .header h1 {
+    font-size: 2.5rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #a371f7);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: .5rem;
+  }
+  .header p { color: var(--muted); font-size: 1.1rem; line-height: 1.6; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    max-width: 800px;
+    width: 100%;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+    display: flex; flex-direction: column; gap: .5rem;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--glow);
+  }
+  .card h2 { font-size: 1.15rem; font-weight: 600; }
+  .card p { color: var(--muted); font-size: .9rem; line-height: 1.5; }
+  .card .date { color: var(--accent); font-size: .8rem; font-weight: 500; }
+  .footer {
+    margin-top: 3rem;
+    color: var(--muted);
+    font-size: .85rem;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Lumen Showcase</h1>
-  <p>AI-generated single-file HTML presentations.</p>
-  <ul>
-    <li><a href="prototype-skill.html">Prototype Skill</a></li>
-    <li><a href="research-skill.html">Research Skill</a></li>
-    <li><a href="navigator-strategy.html">Navigator Strategy</a></li>
-    <li><a href="wayfinder-ecosystem.html">Wayfinder Ecosystem</a></li>
-  </ul>
+<div class="header">
+  <h1>◈ Lumen Showcase</h1>
+  <p>Single-file HTML presentations built with Lumen. Zero dependencies, fully self-contained.</p>
+</div>
+<div class="grid">
+  <a href="wayfinder-ecosystem.html" class="card">
+    <span class="date">July 10, 2026</span>
+    <h2>Wayfinder Ecosystem</h2>
+    <p>System architecture and ecosystem design.</p>
+  </a>
+  <a href="navigator-strategy.html" class="card">
+    <span class="date">July 10, 2026</span>
+    <h2>Navigator Strategy</h2>
+    <p>Strategic navigation framework and decision paths.</p>
+  </a>
+  <a href="prototype-skill.html" class="card">
+    <span class="date">July 10, 2026</span>
+    <h2>Prototype Skill</h2>
+    <p>Prototyping workflow and skill design.</p>
+  </a>
+  <a href="research-skill.html" class="card">
+    <span class="date">July 10, 2026</span>
+    <h2>Research Skill</h2>
+    <p>Research methodology and execution framework.</p>
+  </a>
+</div>
+<div class="footer">
+  Built with <a href="https://github.com/the-forge-flow/lumen">Lumen</a> · 
+  Source on <a href="https://github.com/zosmaai/lumen-showcase">GitHub</a>
 </div>
 </body>
 </html>
