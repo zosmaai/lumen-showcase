@@ -78,14 +78,14 @@
 <div class="layout">
   <aside>
     <h3>Showcases</h3>
-    <button class="item active" onclick="show('wayfinder-ecosystem.html',this)">Wayfinder Ecosystem</button>
-    <button class="item" onclick="show('navigator-strategy.html',this)">Navigator Strategy</button>
-    <button class="item" onclick="show('prototype-skill.html',this)">Prototype Skill</button>
-    <button class="item" onclick="show('research-skill.html',this)">Research Skill</button>
+    <button class="item" data-page="wayfinder-ecosystem.html">Wayfinder Ecosystem</button>
+    <button class="item" data-page="navigator-strategy.html">Navigator Strategy</button>
+    <button class="item" data-page="prototype-skill.html">Prototype Skill</button>
+    <button class="item" data-page="research-skill.html">Research Skill</button>
   </aside>
   <main>
     <div class="viewer">
-      <iframe id="viewer" src="wayfinder-ecosystem.html" loading="lazy"></iframe>
+      <iframe id="viewer" loading="lazy"></iframe>
     </div>
   </main>
 </div>
@@ -94,11 +94,40 @@
   Generated with lumen skill suite · GitHub Pages
 </footer>
 <script>
-function show(path, el){
-  document.getElementById('viewer').src = path;
-  document.querySelectorAll('.item').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
+const items = document.querySelectorAll('.item');
+const viewer = document.getElementById('viewer');
+const defaultPage = 'wayfinder-ecosystem.html';
+
+function show(path, el) {
+  viewer.src = path;
+  items.forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  // Update URL hash for shareable links
+  history.pushState(null, '', '#' + path);
 }
+
+// On load, check for hash param
+const hash = location.hash.slice(1);
+const target = items.find(i => i.dataset.page === hash) ||
+               items[0];
+
+if (target) {
+  show(target.dataset.page, target);
+} else {
+  show(defaultPage, items[0]);
+}
+
+// Wire up clicks
+items.forEach(item => {
+  item.addEventListener('click', () => show(item.dataset.page, item));
+});
+
+// Handle back/forward navigation
+window.addEventListener('hashchange', () => {
+  const h = location.hash.slice(1);
+  const t = items.find(i => i.dataset.page === h);
+  if (t) show(t.dataset.page, t);
+});
 </script>
 </body>
 </html>
