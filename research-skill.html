@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matt Pocock's Research Skill — Deep Dive</title>
+<style>
+/* === RESET === */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* === MIDNIGHT EDITORIAL THEME === */
+:root {
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --text: #e8e0d4;
+  --text-secondary: #a09888;
+  --accent: #c9a84c;
+  --accent-soft: rgba(201, 168, 76, 0.12);
+  --border: #2a2a3e;
+  --code-bg: #16162a;
+  --font-serif: 'Georgia', 'Times New Roman', serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* === BASE === */
+html { scroll-snap-type: y mandatory; overflow-y: scroll; scroll-behavior: smooth; }
+body {
+  font-family: var(--font-serif);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+/* === SLIDE === */
+.slide {
+  min-height: 100vh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem 3rem;
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* === REVEAL ANIMATIONS === */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* === TITLE SLIDE === */
+.slide--title {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.slide--title h1 {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+.slide--title .subtitle {
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+  color: var(--text-secondary);
+  font-style: italic;
+  max-width: 600px;
+}
+.slide--title .decorative {
+  width: 60px;
+  height: 2px;
+  background: var(--accent);
+  margin: 2rem 0;
+}
+
+/* === SECTION SLIDE === */
+.slide--section {
+  align-items: flex-start;
+}
+.slide--section h2 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 400;
+  color: var(--text);
+  border-left: 4px solid var(--accent);
+  padding-left: 1.5rem;
+}
+.slide--section .section-number {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  margin-bottom: 1rem;
+  letter-spacing: 0.1em;
+}
+
+/* === CONTENT SLIDE === */
+.slide--content h2 {
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+.slide--content p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  max-width: 700px;
+}
+.slide--content ul {
+  list-style: none;
+  padding: 0;
+}
+.slide--content li {
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  position: relative;
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+}
+.slide--content li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+/* === QUOTE SLIDE === */
+.slide--quote {
+  align-items: center;
+  text-align: center;
+  background: var(--surface);
+}
+.slide--quote blockquote {
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  font-style: italic;
+  color: var(--text);
+  max-width: 700px;
+  line-height: 1.8;
+  position: relative;
+}
+.slide--quote blockquote::before {
+  content: '"';
+  font-size: 6rem;
+  color: var(--accent);
+  opacity: 0.3;
+  position: absolute;
+  top: -2.5rem;
+  left: -1.5rem;
+  font-family: var(--font-serif);
+}
+.slide--quote .attribution {
+  margin-top: 1.5rem;
+  color: var(--accent);
+  font-style: normal;
+  font-size: 1rem;
+}
+
+/* === COMPARISON SLIDE === */
+.slide--comparison {
+  align-items: stretch;
+}
+.slide--comparison h2 {
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+.comparison-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2rem;
+}
+.comparison-card h3 {
+  color: var(--accent);
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  font-weight: 400;
+}
+.comparison-card p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* === TABLE SLIDE === */
+.slide--table h2 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+.table-wrap {
+  overflow-x: auto;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+}
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--accent);
+  color: var(--bg);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+tbody tr:hover { background: var(--accent-soft); }
+
+/* === CODE SLIDE === */
+.slide--code h2 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  position: relative;
+}
+.code-block::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--accent);
+  color: var(--bg);
+  padding: 0.2rem 0.75rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 0 8px 0 8px;
+}
+.code-block .comment { color: #5a5a7a; }
+.code-block .keyword { color: var(--accent); }
+.code-block .string { color: #a8d8a8; }
+
+/* === DIAGRAM SLIDE === */
+.slide--diagram h2 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.diagram {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2rem;
+  font-family: var(--font-sans);
+}
+
+/* === CLOSING SLIDE === */
+.slide--closing {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.slide--closing h2 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+.slide--closing p {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  max-width: 600px;
+}
+
+/* === PROGRESS BAR === */
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  z-index: 100;
+  transition: width 0.15s;
+}
+
+/* === SLIDE COUNTER === */
+.counter {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  z-index: 100;
+}
+
+/* === SVG DECORATIONS === */
+.deco-line {
+  display: block;
+  width: 40px;
+  height: 1px;
+  background: var(--accent);
+  margin: 1.5rem 0;
+  opacity: 0.5;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .slide { padding: 2rem 1.5rem; }
+  .comparison-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter"></div>
+
+<!-- SLIDE 1: TITLE -->
+<section class="slide slide--title">
+  <svg width="40" height="40" viewBox="0 0 40 40" style="margin-bottom:1.5rem;opacity:0.6">
+    <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1" color="#c9a84c"/>
+    <circle cx="20" cy="20" r="8" fill="none" stroke="currentColor" stroke-width="1" color="#c9a84c"/>
+    <line x1="20" y1="2" x2="20" y2="8" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="20" y1="32" x2="20" y2="38" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="2" y1="20" x2="8" y2="20" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="32" y1="20" x2="38" y2="20" stroke="#c9a84c" stroke-width="1"/>
+  </svg>
+  <h1 class="reveal">Research</h1>
+  <div class="decorative reveal"></div>
+  <p class="subtitle reveal">Primary-source investigation as delegated legwork in the Matt Pocock skills ecosystem</p>
+  <p style="margin-top:2rem;font-size:0.85rem;color:var(--text-secondary);font-family:var(--font-mono)" class="reveal">Midnight Editorial · 2026</p>
+</section>
+
+<!-- SLIDE 2: WHAT IS IT -->
+<section class="slide slide--content">
+  <span class="section-number reveal">01</span>
+  <h2 class="reveal">What It Is</h2>
+  <p class="reveal"><strong>Research</strong> spins up a background agent to investigate a question against primary sources, then captures the findings as a cited Markdown file in your repo.</p>
+  <p class="reveal">It is <em>legwork you delegate</em>, not thinking you outsource. You keep your conversation going while it reads. When it's done, you get a document to react to — with every claim traced to its source.</p>
+  <div class="deco-line reveal"></div>
+  <ul class="reveal">
+    <li>Input: a question or investigation topic</li>
+    <li>Output: a single Markdown file with inline citations</li>
+    <li>Constraint: <strong>primary sources only</strong></li>
+  </ul>
+</section>
+
+<!-- SLIDE 3: THE ONE RULE -->
+<section class="slide slide--quote">
+  <blockquote class="reveal">
+    Investigate against primary sources — official docs, source code, specs, first-party APIs — not a secondary write-up of them.
+  </blockquote>
+  <p class="attribution reveal">The single constraint of the Research skill</p>
+  <div class="deco-line reveal" style="margin:2rem auto"></div>
+  <p class="reveal" style="color:var(--text-secondary);font-size:0.95rem;max-width:550px">
+    Every claim must follow back to the source that owns it. No summaries of summaries.
+  </p>
+</section>
+
+<!-- SLIDE 4: THE BACKGROUND AGENT PATTERN -->
+<section class="slide slide--content">
+  <span class="section-number reveal">02</span>
+  <h2 class="reveal">The Background Agent Pattern</h2>
+  <p class="reveal">The defining architectural move: <strong>reading happens off-thread</strong>.</p>
+  <p class="reveal">You invoke <code>/research</code> with a question. A background agent spawns. Your main conversation continues uninterrupted. The agent reads, verifies, writes — and drops the result file when done.</p>
+  <div class="deco-line reveal"></div>
+  <p class="reveal" style="color:var(--accent)">This is not outsourcing. It's parallelization of the boring part.</p>
+</section>
+
+<!-- SLIDE 5: PIPELINE DIAGRAM -->
+<section class="slide slide--diagram">
+  <span class="section-number reveal">03</span>
+  <h2 class="reveal reveal">Research Pipeline</h2>
+  <div class="diagram reveal">
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;justify-content:center;margin:1rem 0">
+      <div style="text-align:center;padding:1rem 1.5rem;background:var(--accent-soft);border:1px solid var(--accent);border-radius:6px">
+        <div style="font-size:0.75rem;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em">You</div>
+        <div style="margin-top:0.5rem">/research question</div>
+      </div>
+      <div style="color:var(--accent);font-size:1.5rem">→</div>
+      <div style="text-align:center;padding:1rem 1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:6px">
+        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em">Background Agent</div>
+        <div style="margin-top:0.5rem">Reads primary sources</div>
+      </div>
+      <div style="color:var(--accent);font-size:1.5rem">→</div>
+      <div style="text-align:center;padding:1rem 1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:6px">
+        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em">Output</div>
+        <div style="margin-top:0.5rem">Findings.md (cited)</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:1.5rem">
+      <div style="font-size:0.8rem;color:var(--text-secondary);padding:0.5rem;background:var(--code-bg);border-radius:4px;display:inline-block">
+        ⧗ You keep working while agent reads
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 6: COMPARISON -->
+<section class="slide slide--comparison">
+  <span class="section-number reveal">04</span>
+  <h2 class="reveal">Research vs Other Skills</h2>
+  <div class="comparison-grid reveal">
+    <div class="comparison-card">
+      <h3>Research</h3>
+      <p><strong>Find out</strong> — read primary sources, gather facts, produce cited document. Background agent. Upstream of thinking.</p>
+    </div>
+    <div class="comparison-card">
+      <h3>Grilling</h3>
+      <p><strong>Decide</strong> — interview the user about a plan or design. HITL conversation. One question at a time. Sharpening, not gathering.</p>
+    </div>
+    <div class="comparison-card">
+      <h3>Prototype</h3>
+      <p><strong>Explore</strong> — cheap, rough artifacts to react to. Throwaway code that reveals "how it should look/behave."</p>
+    </div>
+    <div class="comparison-card">
+      <h3>Wayfinder</h3>
+      <p><strong>Map</strong> — chart investigation tickets. Research tickets are one type. Wayfinder plans; Research fills in the blanks.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 7: PRIMARY SOURCES TABLE -->
+<section class="slide slide--table">
+  <span class="section-number reveal">05</span>
+  <h2 class="reveal">Primary Source Hierarchy</h2>
+  <div class="table-wrap reveal">
+    <table>
+      <thead>
+        <tr>
+          <th>Source Type</th>
+          <th>Trust Level</th>
+          <th>Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Official documentation</td>
+          <td style="color:var(--accent)">Highest</td>
+          <td>Framework docs, API reference</td>
+        </tr>
+        <tr>
+          <td>Source code</td>
+          <td style="color:var(--accent)">Highest</td>
+          <td>Library implementation, spec text</td>
+        </tr>
+        <tr>
+          <td>First-party APIs</td>
+          <td style="color:var(--accent)">Highest</td>
+          <td>SDK source, release notes</td>
+        </tr>
+        <tr>
+          <td>Standards/specs</td>
+          <td style="color:var(--accent)">Highest</td>
+          <td>W3C specs, RFCs, ISO standards</td>
+        </tr>
+        <tr>
+          <td>Secondary write-ups</td>
+          <td style="color:#dc2626">Excluded</td>
+          <td>Blogs, summaries, tutorials</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SLIDE 8: CODE EXAMPLE -->
+<section class="slide slide--code">
+  <span class="section-number reveal">06</span>
+  <h2 class="reveal">Skill Definition</h2>
+  <div class="code-block reveal" data-lang="YAML">
+<span class="comment">--- name: research ---</span>
+
+Spin up a <span class="keyword">background agent</span> to do the research,
+so you keep working while it reads.
+
+Its job:
+  1. Investigate against <span class="string">primary sources</span> — official docs,
+     source code, specs, first-party APIs
+  2. Write findings to a single Markdown file, <span class="string">citing each source</span>
+  3. Save where the repo already keeps such notes
+  </div>
+  <div style="margin-top:1.5rem" class="reveal">
+    <p style="color:var(--text-secondary);font-size:0.9rem">Total skill: 6 lines. The constraint does the work.</p>
+  </div>
+</section>
+
+<!-- SLIDE 9: WAYFINDER INTEGRATION -->
+<section class="slide slide--content">
+  <span class="section-number reveal">07</span>
+  <h2 class="reveal">Research as a Wayfinder Ticket Type</h2>
+  <p class="reveal">In the Wayfinder planning system, <code>research</code> is one of four ticket types. It's the <strong>AFK</strong> (Away From Keyboard) type — fully autonomous, no human interaction needed.</p>
+  <div class="deco-line reveal"></div>
+  <ul class="reveal">
+    <li><strong>Research</strong> — AFK: read docs, APIs, code → Markdown summary</li>
+    <li><strong>Prototype</strong> — HITL: build cheap artifacts → human reacts</li>
+    <li><strong>Grilling</strong> — HITL: interview → human decides</li>
+    <li><strong>Task</strong> — HITL or AFK: do manual work → result recorded</li>
+  </ul>
+  <p class="reveal" style="color:var(--accent);margin-top:1rem">Research is the fuel for Wayfinder maps. You can't chart what you haven't researched.</p>
+</section>
+
+<!-- SLIDE 10: OUTPUT FORMAT -->
+<section class="slide slide--code">
+  <span class="section-number reveal">08</span>
+  <h2 class="reveal">Output Format</h2>
+  <div class="code-block reveal" data-lang="MD">
+<span class="comment"># Research: OAuth 2.1 Token Lifecycle</span>
+
+The token endpoint returns an <span class="string">access_token</span> and
+<span class="string">refresh_token</span> pair. Per [RFC 6749 §4.1.4](link):
+
+> The access token expires after the duration specified
+> in the "expires_in" field.
+
+Refresh flow per [RFC 6749 §6](link):
+- Client sends <span class="string">grant_type=refresh_token</span>
+- Server issues new token pair
+- Old refresh token <span class="string">may</span> be rotated
+
+<span class="comment">Source: IETF RFC 6749 (OAuth 2.0 core spec)</span>
+<span class="comment">Source: rfc-editor.org/rfc/rfc6749</span>
+</div>
+</section>
+
+<!-- SLIDE 11: WHEN TO USE -->
+<section class="slide slide--content">
+  <span class="section-number reveal">09</span>
+  <h2 class="reveal">When to Reach for It</h2>
+  <ul class="reveal">
+    <li>Next step is <strong>finding something out</strong>, not deciding</li>
+    <li>API behavior question: "What does this endpoint actually return?"</li>
+    <li>Claim verification: "Does the spec say X?"</li>
+    <li>Reading legwork: "Gather all the auth requirements"</li>
+    <li>Upstream of thinking: research feeds grilling, planning, design</li>
+  </ul>
+  <div class="deco-line reveal"></div>
+  <p class="reveal" style="color:var(--accent)">
+    <strong>Don't use when:</strong> You need to sharpen a plan by interview (use Grilling) or explore what to build with code (use Prototype).
+  </p>
+</section>
+
+<!-- SLIDE 12: PHILOSOPHY -->
+<section class="slide slide--quote">
+  <blockquote class="reveal">
+    Research is legwork you delegate, not thinking you outsource.
+  </blockquote>
+  <p class="attribution reveal">— Matt Pocock, Research skill</p>
+  <div class="deco-line reveal" style="margin:2rem auto"></div>
+  <p class="reveal" style="color:var(--text-secondary);font-size:0.95rem;max-width:500px;margin:0 auto">
+    The distinction matters. The agent reads; you react. The output is a document you judge, not a decision made for you.
+  </p>
+</section>
+
+<!-- SLIDE 13: CLOSING -->
+<section class="slide slide--closing">
+  <svg width="40" height="40" viewBox="0 0 40 40" style="margin-bottom:2rem;opacity:0.6">
+    <circle cx="20" cy="20" r="18" fill="none" stroke="#c9a84c" stroke-width="1"/>
+    <circle cx="20" cy="20" r="8" fill="none" stroke="#c9a84c" stroke-width="1"/>
+    <circle cx="20" cy="20" r="2" fill="#c9a84c"/>
+  </svg>
+  <h2 class="reveal">Primary Sources. Delegated Reading. Cited Output.</h2>
+  <div class="deco-line reveal" style="width:40px;margin:1.5rem auto"></div>
+  <p class="reveal">Six lines of skill. One constraint. Infinite questions.</p>
+  <p style="margin-top:2rem;font-size:0.85rem;color:var(--text-secondary);font-family:var(--font-mono)" class="reveal">
+    research SKILL.md · Matt Pocock Skills · MIT
+  </p>
+</section>
+
+<script>
+// === PROGRESS + COUNTER ===
+const slides = document.querySelectorAll('.slide');
+const progress = document.getElementById('progress');
+const counter = document.getElementById('counter');
+
+function updateProgress() {
+  const scrollY = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = (scrollY / docHeight) * 100;
+  progress.style.width = pct + '%';
+
+  const currentSlide = Math.round(scrollY / window.innerHeight) + 1;
+  counter.textContent = `${Math.min(currentSlide, slides.length)} / ${slides.length}`;
+}
+
+window.addEventListener('scroll', updateProgress, { passive: true });
+updateProgress();
+
+// === REVEAL ON SCROLL ===
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// === KEYBOARD NAV ===
+document.addEventListener('keydown', (e) => {
+  const slideHeight = window.innerHeight;
+  if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+    e.preventDefault();
+    window.scrollBy({ top: slideHeight, behavior: 'smooth' });
+  } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+    e.preventDefault();
+    window.scrollBy({ top: -slideHeight, behavior: 'smooth' });
+  } else if (e.key === 'Home') {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (e.key === 'End') {
+    e.preventDefault();
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+  }
+});
+</script>
+</body>
+</html>

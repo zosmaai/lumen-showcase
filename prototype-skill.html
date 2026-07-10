@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matt Pocock's Prototype Skill — Deep Dive</title>
+<!-- Aesthetic: Midnight Editorial -->
+<style>
+/* === RESET === */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* === MIDNIGHT EDITORIAL THEME === */
+:root {
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --text: #e8e0d4;
+  --text-secondary: #a09888;
+  --accent: #c9a84c;
+  --accent-soft: rgba(201, 168, 76, 0.12);
+  --border: #2a2a3e;
+  --code-bg: #16162a;
+  --font-serif: 'Georgia', 'Times New Roman', serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+html { scroll-snap-type: y mandatory; overflow-y: scroll; scroll-behavior: smooth; }
+body {
+  font-family: var(--font-serif);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.slide {
+  min-height: 100vh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem 3rem;
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* TITLE */
+.slide--title {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.slide--title h1 {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+.slide--title .subtitle {
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+  color: var(--text-secondary);
+  font-style: italic;
+  max-width: 600px;
+}
+.deco-line {
+  display: block;
+  width: 60px;
+  height: 2px;
+  background: var(--accent);
+  margin: 2rem 0;
+}
+
+/* SECTION */
+.slide--section { align-items: flex-start; }
+.slide--section h2 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 400;
+  color: var(--text);
+  border-left: 4px solid var(--accent);
+  padding-left: 1.5rem;
+}
+.section-number {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  margin-bottom: 1rem;
+  letter-spacing: 0.1em;
+}
+
+/* CONTENT */
+.slide--content h2 {
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+.slide--content p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  max-width: 700px;
+}
+.slide--content ul { list-style: none; padding: 0; }
+.slide--content li {
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  position: relative;
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+}
+.slide--content li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+/* QUOTE */
+.slide--quote {
+  align-items: center;
+  text-align: center;
+  background: var(--surface);
+}
+.slide--quote blockquote {
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  font-style: italic;
+  color: var(--text);
+  max-width: 700px;
+  line-height: 1.8;
+  position: relative;
+}
+.slide--quote blockquote::before {
+  content: '"';
+  font-size: 6rem;
+  color: var(--accent);
+  opacity: 0.3;
+  position: absolute;
+  top: -2.5rem;
+  left: -1.5rem;
+}
+.slide--quote .attribution {
+  margin-top: 1.5rem;
+  color: var(--accent);
+  font-style: normal;
+  font-size: 1rem;
+}
+
+/* COMPARISON */
+.slide--comparison { align-items: stretch; }
+.slide--comparison h2 {
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+.comparison-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2rem;
+}
+.comparison-card h3 {
+  color: var(--accent);
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  font-weight: 400;
+}
+.comparison-card p, .comparison-card li {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.comparison-card ul { list-style: none; padding: 0; }
+.comparison-card li {
+  padding: 0.3rem 0 0.3rem 1.2rem;
+  position: relative;
+}
+.comparison-card li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+/* TABLE */
+.slide--table h2 { font-size: 2rem; margin-bottom: 1.5rem; }
+.table-wrap {
+  overflow-x: auto;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+}
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--accent);
+  color: var(--bg);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+tbody tr:hover { background: var(--accent-soft); }
+
+/* CODE */
+.slide--code h2 { font-size: 2rem; margin-bottom: 1.5rem; }
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  position: relative;
+}
+.code-block::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--accent);
+  color: var(--bg);
+  padding: 0.2rem 0.75rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 0 8px 0 8px;
+}
+.code-block .comment { color: #5a5a7a; }
+.code-block .keyword { color: var(--accent); }
+.code-block .string { color: #a8d8a8; }
+
+/* DIAGRAM */
+.slide--diagram h2 { font-size: 2rem; margin-bottom: 2rem; text-align: center; }
+.diagram {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2rem;
+  font-family: var(--font-sans);
+}
+
+/* CLOSING */
+.slide--closing {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.slide--closing h2 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+.slide--closing p {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  max-width: 600px;
+}
+
+/* PROGRESS */
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  z-index: 100;
+  transition: width 0.15s;
+}
+.counter {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  z-index: 100;
+}
+
+@media (max-width: 768px) {
+  .slide { padding: 2rem 1.5rem; }
+  .comparison-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter"></div>
+
+<!-- SLIDE 1: TITLE -->
+<section class="slide slide--title">
+  <svg width="48" height="48" viewBox="0 0 48 48" style="margin-bottom:1.5rem;opacity:0.7">
+    <rect x="8" y="8" width="32" height="32" fill="none" stroke="#c9a84c" stroke-width="1.5" rx="2"/>
+    <line x1="8" y1="20" x2="40" y2="20" stroke="#c9a84c" stroke-width="0.75"/>
+    <circle cx="16" cy="32" r="3" fill="#c9a84c" opacity="0.4"/>
+    <circle cx="24" cy="32" r="3" fill="#c9a84c" opacity="0.4"/>
+    <circle cx="32" cy="32" r="3" fill="#c9a84c" opacity="0.4"/>
+  </svg>
+  <h1 class="reveal">Prototype</h1>
+  <div class="deco-line reveal"></div>
+  <p class="subtitle reveal">Throwaway code that answers one design question — then gets deleted</p>
+  <p style="margin-top:2rem;font-size:0.85rem;color:var(--text-secondary);font-family:var(--font-mono)" class="reveal">Midnight Editorial · 2026</p>
+</section>
+
+<!-- SLIDE 2: CORE IDEA -->
+<section class="slide slide--content">
+  <span class="section-number reveal">01</span>
+  <h2 class="reveal">The Core Idea</h2>
+  <p class="reveal"><strong>Prototype</strong> builds a small, disposable program to answer <em>one design question</em>. The code is throwaway from day one — no tests, no error handling, no abstractions.</p>
+  <p class="reveal">The point: <strong>learn something fast, then delete it</strong>. The moment you start hardening prototype code, you've stopped prototyping.</p>
+  <div class="deco-line reveal"></div>
+  <ul class="reveal">
+    <li>One command to run</li>
+    <li>State in memory only</li>
+    <li>Full state surfaced on every step</li>
+    <li>Marked clearly as prototype, not production</li>
+  </ul>
+</section>
+
+<!-- SLIDE 3: THE ONE RULE -->
+<section class="slide slide--quote">
+  <blockquote class="reveal">
+    Code is disposable. The answer is the only thing worth keeping.
+  </blockquote>
+  <p class="attribution reveal">The prototype discipline</p>
+  <div class="deco-line reveal" style="margin:2rem auto"></div>
+  <p class="reveal" style="color:var(--text-secondary);font-size:0.95rem;max-width:550px">
+    When the prototype answers its question, capture the verdict somewhere durable — commit message, ADR, issue, <code>NOTES.md</code> — then delete or absorb the code.
+  </p>
+</section>
+
+<!-- SLIDE 4: TWO BRANCHES -->
+<section class="slide slide--comparison">
+  <span class="section-number reveal">02</span>
+  <h2 class="reveal">Two Branches — Question Decides</h2>
+  <div class="comparison-grid reveal">
+    <div class="comparison-card">
+      <h3>🔧 Logic Prototype</h3>
+      <p style="margin-bottom:0.75rem"><strong>"Does this state model feel right?"</strong></p>
+      <ul>
+        <li>Interactive terminal app</li>
+        <li>Push state machine through edge cases</li>
+        <li>Full state printed after every action</li>
+        <li>Portable logic module behind thin TUI shell</li>
+        <li>Validated reducer can be lifted into real code</li>
+      </ul>
+    </div>
+    <div class="comparison-card">
+      <h3>🎨 UI Prototype</h3>
+      <p style="margin-bottom:0.75rem"><strong>"What should this look like?"</strong></p>
+      <ul>
+        <li>3 radically different UI variations</li>
+        <li>Switchable via <code>?variant=</code> URL param</li>
+        <li>Floating bottom bar for navigation</li>
+        <li>Butt up against real page with real data</li>
+        <li>Structurally different — not color tweaks</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 5: FIVE RULES -->
+<section class="slide slide--table">
+  <span class="section-number reveal">03</span>
+  <h2 class="reveal">Five Rules — Apply to Both Branches</h2>
+  <div class="table-wrap reveal">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>Throwaway day one</strong> — marked as prototype</td>
+          <td>Context is obvious; no accidental production merge</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>One command to run</strong> — existing task runner</td>
+          <td>User starts without thinking</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>No persistence default</strong> — in-memory state</td>
+          <td>Persistence is what you might be checking, not something to depend on</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>Skip polish</strong> — no tests, no error handling, no abstractions</td>
+          <td>Point is to learn fast, then delete</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>Surface state</strong> — print full state on every step</td>
+          <td>User sees what changed, spots the design bugs</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SLIDE 6: LOGIC PROTOTYPE PIPELINE -->
+<section class="slide slide--diagram">
+  <span class="section-number reveal">04</span>
+  <h2 class="reveal">Logic Prototype — Pipeline</h2>
+  <div class="diagram reveal">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:0.75rem">
+      <div style="padding:0.75rem 1.5rem;background:var(--accent-soft);border:1px solid var(--accent);border-radius:6px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em">Step 1</div>
+        State the question (one paragraph, top of file)
+      </div>
+      <div style="color:var(--accent);font-size:1.2rem">↓</div>
+      <div style="padding:0.75rem 1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em">Step 2</div>
+        Pick project language (match host conventions)
+      </div>
+      <div style="color:var(--accent);font-size:1.2rem">↓</div>
+      <div style="padding:0.75rem 1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em">Step 3</div>
+        Isolate logic in portable module (reducer / state machine / pure functions)
+      </div>
+      <div style="color:var(--accent);font-size:1.2rem">↓</div>
+      <div style="padding:0.75rem 1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em">Step 4</div>
+        Build lightweight TUI (clear screen, re-render full frame)
+      </div>
+      <div style="color:var(--accent);font-size:1.2rem">↓</div>
+      <div style="padding:0.75rem 1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em">Step 5</div>
+        Hand over → user drives → capture answer → delete TUI, lift logic
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 7: LOGIC CODE EXAMPLE -->
+<section class="slide slide--code">
+  <span class="section-number reveal">05</span>
+  <h2 class="reveal">Logic Prototype — The Shape</h2>
+  <div class="code-block reveal" data-lang="TS">
+<span class="comment">// PROTOTYPE — throwaway TUI</span>
+<span class="comment">// Question: Does cart state machine handle partial refunds?</span>
+
+<span class="comment">// ← PORTABLE MODULE — lift this into real code</span>
+<span class="keyword">type</span> CartState = { items: Item[]; refunds: Refund[] };
+<span class="keyword">function</span> applyRefund(state, refund): CartState { ··· }
+
+<span class="comment">// ← TUI SHELL — deleted after prototype</span>
+<span class="keyword">function</span> main() {
+  <span class="keyword">let</span> state = initialCart();
+  loop {
+    console.<span class="string">clear</span>();
+    renderState(state);        <span class="comment">// pretty-printed</span>
+    renderKeys();              <span class="comment">// [r] refund, [q] quit</span>
+    key = readKey();
+    state = dispatch(state, key);
+  }
+}
+</div>
+  <div style="margin-top:1rem" class="reveal">
+    <p style="color:var(--accent);font-size:0.9rem">Rule: TUI imports the logic module. Nothing flows the other direction.</p>
+  </div>
+</section>
+
+<!-- SLIDE 8: UI PROTOTYPE -->
+<section class="slide slide--content">
+  <span class="section-number reveal">06</span>
+  <h2 class="reveal">UI Prototype — Sub-Shapes</h2>
+  <p class="reveal">Two sub-shapes, one preferred:</p>
+  <div class="deco-line reveal"></div>
+  <ul class="reveal">
+    <li><strong>Sub-shape A (preferred)</strong> — Adjust an <em>existing page</em>. Variants on the same route via <code>?variant=</code>. Real data, real components. Design problems surface when you butt up against reality.</li>
+    <li><strong>Sub-shape B (last resort)</strong> — Brand new throwaway route at <code>/prototype/&lt;name&gt;</code>. Only when there's genuinely no existing page to host variants. Empty routes hide design problems populated ones would expose.</li>
+  </ul>
+  <div class="deco-line reveal"></div>
+  <p class="reveal" style="color:var(--accent)">Default to <strong>3 variants</strong>. Cap at 5. More becomes noise, not signal.</p>
+</section>
+
+<!-- SLIDE 9: UI CODE EXAMPLE -->
+<section class="slide slide--code">
+  <span class="section-number reveal">07</span>
+  <h2 class="reveal">UI Prototype — Switcher Pattern</h2>
+  <div class="code-block reveal" data-lang="TSX">
+<span class="comment">// Pseudo-code — adapt to project framework</span>
+<span class="keyword">const</span> variant = searchParams.<span class="string">get</span>('variant') ?? 'A';
+
+<span class="keyword">return</span> (
+  &lt;&gt;
+    {variant === 'A' && &lt;<span class="string">VariantA</span> {...data} /&gt;}
+    {variant === 'B' && &lt;<span class="string">VariantB</span> {...data} /&gt;}
+    {variant === 'C' && &lt;<span class="string">VariantC</span> {...data} /&gt;}
+    &lt;<span class="string">PrototypeSwitcher</span> variants={['A','B','C']} current={variant} /&gt;
+  &lt;&gt;
+);
+
+<span class="comment">// Floating bottom bar: ← A — Card layout →</span>
+<span class="comment">// Keyboard: ← → arrows cycle (not inside inputs)</span>
+<span class="comment">// Production: hidden behind NODE_ENV !== 'production'</span>
+</div>
+</section>
+
+<!-- SLIDE 10: ANTI-PATTERNS -->
+<section class="slide slide--comparison">
+  <span class="section-number reveal">08</span>
+  <h2 class="reveal">Anti-Patterns — What Kills a Prototype</h2>
+  <div class="comparison-grid reveal">
+    <div class="comparison-card">
+      <h3>Logic Branch</h3>
+      <ul>
+        <li>Adding tests — if it needs tests, it's no longer prototype</li>
+        <li>Wiring real database — question is about design, not persistence</li>
+        <li>Generalizing — "what if we supported X later"</li>
+        <li>Blurring logic and TUI — <code>console.log</code> in the reducer</li>
+        <li>Shipping TUI into production — delete shell, lift module</li>
+      </ul>
+    </div>
+    <div class="comparison-card">
+      <h3>UI Branch</h3>
+      <ul>
+        <li>Variants differ only in color — not a prototype, wallpaper</li>
+        <li>Sharing too much code — shared <code>&lt;Layout&gt;</code> defeats the point</li>
+        <li>Wiring real mutations — question is "what should look like"</li>
+        <li>Promoting prototype directly to production — rewrite properly</li>
+        <li>New page when existing one would work — empty routes hide problems</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 11: LIFECYCLE -->
+<section class="slide slide--diagram">
+  <span class="section-number reveal">09</span>
+  <h2 class="reveal">Prototype Lifecycle</h2>
+  <div class="diagram reveal">
+    <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;justify-content:center">
+      <div style="text-align:center;padding:1rem;background:var(--accent-soft);border:1px solid var(--accent);border-radius:6px;min-width:120px">
+        <div style="font-size:0.7rem;color:var(--accent);text-transform:uppercase">1. Build</div>
+        <div style="margin-top:0.5rem;font-size:0.9rem">Throwaway code</div>
+      </div>
+      <div style="color:var(--accent)">→</div>
+      <div style="text-align:center;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:120px">
+        <div style="font-size:0.7rem;color:var(--text-secondary);text-transform:uppercase">2. Drive</div>
+        <div style="margin-top:0.5rem;font-size:0.9rem">User reacts</div>
+      </div>
+      <div style="color:var(--accent)">→</div>
+      <div style="text-align:center;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:120px">
+        <div style="font-size:0.7rem;color:var(--text-secondary);text-transform:uppercase">3. Capture</div>
+        <div style="margin-top:0.5rem;font-size:0.9rem">Answer recorded</div>
+      </div>
+      <div style="color:var(--accent)">→</div>
+      <div style="text-align:center;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:120px">
+        <div style="font-size:0.7rem;color:var(--text-secondary);text-transform:uppercase">4. Delete</div>
+        <div style="margin-top:0.5rem;font-size:0.9rem">Code removed</div>
+      </div>
+      <div style="color:var(--accent)">→</div>
+      <div style="text-align:center;padding:1rem;background:var(--accent-soft);border:1px solid var(--accent);border-radius:6px;min-width:120px">
+        <div style="font-size:0.7rem;color:var(--accent);text-transform:uppercase">✦ Absorb</div>
+        <div style="margin-top:0.5rem;font-size:0.9rem">Validated decision in real code</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:1.5rem">
+      <div style="font-size:0.85rem;color:var(--text-secondary);padding:0.5rem;background:var(--code-bg);border-radius:4px;display:inline-block">
+        The artifact dies. The knowledge lives.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 12: WAYFINDER -->
+<section class="slide slide--content">
+  <span class="section-number reveal">10</span>
+  <h2 class="reveal">Prototype as a Wayfinder Ticket Type</h2>
+  <p class="reveal">In the Wayfinder ecosystem, <code>prototype</code> is one of four ticket types. Unlike <strong>research</strong> (fully AFK), prototype is <strong>HITL</strong> — Human In The Loop. You need a human to drive the artifact and react.</p>
+  <div class="deco-line reveal"></div>
+  <ul class="reveal">
+    <li><strong>Research</strong> — AFK: agent reads, writes cited Markdown</li>
+    <li><strong>Prototype</strong> — HITL: build cheap artifact, human reacts</li>
+    <li><strong>Grilling</strong> — HITL: interview, human decides</li>
+    <li><strong>Task</strong> — HITL or AFK: manual work, result recorded</li>
+  </ul>
+  <div class="deco-line reveal"></div>
+  <p class="reveal" style="color:var(--accent)">Prototype answers feed <strong>to-spec</strong> and <strong>domain-modeling</strong>. Validated direction becomes settled input for the spec.</p>
+</section>
+
+<!-- SLIDE 13: CLOSING -->
+<section class="slide slide--closing">
+  <svg width="48" height="48" viewBox="0 0 48 48" style="margin-bottom:2rem;opacity:0.6">
+    <rect x="8" y="8" width="32" height="32" fill="none" stroke="#c9a84c" stroke-width="1.5" rx="2"/>
+    <line x1="14" y1="24" x2="34" y2="24" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="14" y1="30" x2="26" y2="30" stroke="#c9a84c" stroke-width="1"/>
+    <circle cx="16" cy="34" r="2" fill="#c9a84c" opacity="0.5"/>
+    <circle cx="22" cy="34" r="2" fill="#c9a84c" opacity="0.5"/>
+    <circle cx="28" cy="34" r="2" fill="#c9a84c" opacity="0.5"/>
+  </svg>
+  <h2 class="reveal">Build Cheap. Learn Fast. Delete Fearlessly.</h2>
+  <div class="deco-line reveal" style="width:40px;margin:1.5rem auto"></div>
+  <p class="reveal">Two branches. Five rules. One question.</p>
+  <p style="margin-top:2rem;font-size:0.85rem;color:var(--text-secondary);font-family:var(--font-mono)" class="reveal">
+    prototype SKILL.md · Matt Pocock Skills · MIT
+  </p>
+</section>
+
+<script>
+// PROGRESS + COUNTER
+const slides = document.querySelectorAll('.slide');
+const progress = document.getElementById('progress');
+const counter = document.getElementById('counter');
+
+function updateProgress() {
+  const scrollY = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  progress.style.width = ((scrollY / docHeight) * 100) + '%';
+  counter.textContent = `${Math.min(Math.round(scrollY / window.innerHeight) + 1, slides.length)} / ${slides.length}`;
+}
+window.addEventListener('scroll', updateProgress, { passive: true });
+updateProgress();
+
+// REVEAL
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+// KEYBOARD
+document.addEventListener('keydown', (e) => {
+  const h = window.innerHeight;
+  if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); window.scrollBy({ top: h, behavior: 'smooth' }); }
+  else if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); window.scrollBy({ top: -h, behavior: 'smooth' }); }
+  else if (e.key === 'Home') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  else if (e.key === 'End') { e.preventDefault(); window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }
+});
+</script>
+</body>
+</html>
