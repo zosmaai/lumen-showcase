@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <title>LLM API Reseller — Build Guide</title>
+  <!-- diagram-meta:start -->
+  <meta name="diagram:title"     content="LLM API Reseller — Build Guide">
+  <meta name="diagram:date"      content="2026-07-14">
+  <meta name="diagram:category"  content="architecture">
+  <meta name="diagram:cat-label" content="Build Guide">
+  <meta name="diagram:color"     content="#fbbf24">
+  <meta name="diagram:badges"    content="LiteLLM · Better Auth · Razorpay">
+  <!-- diagram-meta:end -->
+  <!-- PRECONNECT: Add Google Fonts links for the aesthetic's font pair -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <!-- HEAD_EXTRAS: Mermaid ESM + svg-pan-zoom CDN -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* BASE_STYLES: Concatenate base/*.css in order: reset → layout → typography → components → explainer-base */
+    /* ══════════════════════════════════════════════════════════════════
+   reset.css — box-sizing reset, antialiasing, baseline token contract
+   Part of forge base/ layer. Read once, inline into <style>.
+
+   Token contract: every aesthetic file must define the same custom
+   properties listed below. These are Lyra theme defaults.
+   Roxabi theme values are in aesthetics/roxabi.css (issue #79).
+
+   Extended palette (--amber through --red-dim, --border-bright,
+   --surface2, --bg-panel, --bg-card, --accent-glow) added for
+   fgraph-base.css and explainer-base.css compatibility.
+   Aesthetics override structural tokens; palette tokens are universal.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* ── Baseline Tokens — Lyra Dark (default) ── */
+:root, [data-theme="dark"] {
+  --bg:           #0a0a0f;
+  --surface:      #18181f;
+  --surface2:     #202028;
+  --border:       #2a2a35;
+  --border-bright: #3a3a45;
+  --text:         #fafafa;
+  --text-muted:   #9ca3af;
+  --text-dim:     #6b7280;
+  --accent:       #e85d04;
+  --accent-dim:   #7c2d0e;
+  --accent-glow:  rgba(232,93,4,0.2);
+  --radius:       8px;
+  --radius-sm:    6px;
+  --shadow:       0 1px 3px rgba(0,0,0,0.3);
+
+  /* fgraph + explainer palette */
+  --bg-panel:     var(--surface);
+  --bg-card:      var(--surface);
+  --amber:        #fbbf24;
+  --amber-dim:    rgba(251,191,36,0.12);
+  --cyan:         #22d3ee;
+  --cyan-dim:     rgba(34,211,238,0.12);
+  --green:        #4ade80;
+  --green-dim:    rgba(74,222,128,0.12);
+  --purple:       #c084fc;
+  --purple-dim:   rgba(192,132,252,0.12);
+  --red:          #f87171;
+  --red-dim:      rgba(248,113,113,0.12);
+}
+
+/* ── Baseline Tokens — Lyra Light ── */
+[data-theme="light"] {
+  --bg:           #fafaf9;
+  --surface:      #f4f4f0;
+  --surface2:     #eaeae6;
+  --border:       #d1ccc7;
+  --border-bright: #b0aaa5;
+  --text:         #1c1917;
+  --text-muted:   #57534e;
+  --text-dim:     #78716c;
+  --accent:       #c2410c;
+  --accent-dim:   #fef2e8;
+  --accent-glow:  rgba(194,65,12,0.15);
+  --shadow:       0 1px 3px rgba(0,0,0,0.1);
+
+  --bg-panel:     var(--surface);
+  --bg-card:      var(--surface);
+  --amber:        #d97706;
+  --amber-dim:    rgba(217,119,6,0.1);
+  --cyan:         #0891b2;
+  --cyan-dim:     rgba(8,145,178,0.1);
+  --green:        #16a34a;
+  --green-dim:    rgba(22,163,74,0.1);
+  --purple:       #9333ea;
+  --purple-dim:   rgba(147,51,234,0.1);
+  --red:          #dc2626;
+  --red-dim:      rgba(220,38,38,0.1);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   layout.css — navigation, panels, grid utilities, responsive
+   Part of forge base/ layer. Inline after reset.css.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Nav ── */
+.topnav {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0 1.5rem; height: 3rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.nav-title {
+  font-size: 0.875rem; font-weight: 600;
+  color: var(--text); margin-right: auto; white-space: nowrap;
+}
+.tabs { display: flex; gap: 0.25rem; }
+.tab-btn {
+  padding: 0.375rem 0.875rem; font-size: 0.8125rem;
+  font-family: inherit; font-weight: 500;
+  color: var(--text-dim); background: transparent;
+  border: none; border-radius: 4px; cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.tab-btn:hover  { color: var(--text-muted); background: var(--bg); }
+.tab-btn.active { color: var(--accent);     background: var(--bg); }
+.theme-btn {
+  padding: 0.25rem 0.5rem; font-size: 0.75rem;
+  color: var(--text-dim); background: transparent;
+  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+}
+.theme-btn:hover { color: var(--text-muted); }
+
+/* ── Panels ── */
+.panel { display: none; padding: 2rem 1.5rem; max-width: 960px; margin: 0 auto; }
+.panel.active { display: block; }
+
+/* ── Cards Grid ── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem; margin-bottom: 1.5rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .topnav { padding: 0 1rem; flex-wrap: wrap; height: auto; padding-block: 0.5rem; }
+  .tabs { overflow-x: auto; width: 100%; }
+  .panel { padding: 1.5rem 1rem; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   typography.css — font loading, type scale, code blocks
+   Part of forge base/ layer. Inline after layout.css.
+
+   Preconnect (add to <head> of output HTML):
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Body ── */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Headings ── */
+h1, h2, h3, h4 { color: var(--text); font-weight: 600; }
+h1 { font-size: 1.75rem; margin-bottom: 0.75rem; }
+h2 { font-size: 1.25rem; margin: 2rem 0 0.75rem; }
+h3 { font-size: 1rem;    margin: 1.5rem 0 0.5rem; }
+
+/* ── Body Text ── */
+p  { color: var(--text-muted); margin-bottom: 0.875rem; }
+ul, ol { color: var(--text-muted); padding-left: 1.5rem; margin-bottom: 0.875rem; }
+li { margin-bottom: 0.25rem; }
+
+/* ── Code ── */
+code {
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.875em;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 0.125em 0.35em; border-radius: 3px; color: var(--text);
+}
+pre {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem;
+}
+pre code {
+  background: none; border: none; padding: 0;
+  font-size: 0.875rem; white-space: pre-wrap;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   components.css — cards, tables, semantic color tokens, anti-patterns
+   Part of forge base/ layer. Inline after typography.css.
+
+   Semantic color tokens are consumed by the component library (#82).
+   Each aesthetic file overrides their values.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* FORGE ANTI-PATTERNS — DO NOT USE
+   - No box-shadow with multiple blur layers (glassmorphism)
+   - No text-shadow except .c-* colored ASCII blocks and terminal .glow
+   - No gradient backgrounds (use flat surface tokens)
+   - No border-radius > 8px on content cards
+   - No decorative ::before/::after icons (use text or svg)
+   - No animation/transition except theme-toggle and tab hover (0.15s max)
+*/
+
+/* ── Semantic Color Tokens — Dark ── */
+:root, [data-theme="dark"] {
+  --success:     #34d399;
+  --success-dim: rgba(52,211,153,0.12);
+  --warning:     #fbbf24;
+  --warning-dim: rgba(251,191,36,0.12);
+  --error:       #f87171;
+  --error-dim:   rgba(248,113,113,0.12);
+  --info:        #60a5fa;
+  --info-dim:    rgba(96,165,250,0.12);
+}
+
+/* ── Semantic Color Tokens — Light ── */
+[data-theme="light"] {
+  --success:     #047857;
+  --success-dim: rgba(4,120,87,0.1);
+  --warning:     #d97706;
+  --warning-dim: rgba(217,119,6,0.1);
+  --error:       #dc2626;
+  --error-dim:   rgba(220,38,38,0.1);
+  --info:        #2563eb;
+  --info-dim:    rgba(37,99,235,0.1);
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+}
+.card.accent { border-left: 3px solid var(--accent); }
+.card-label {
+  font-size: 0.6875rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--accent); margin-bottom: 0.5rem;
+}
+.card-title {
+  font-size: 0.9375rem; font-weight: 600;
+  color: var(--text); margin-bottom: 0.375rem;
+}
+.card-body { font-size: 0.875rem; color: var(--text-muted); }
+
+/* ── Tables ── */
+.table-wrap {
+  overflow-x: auto; margin-bottom: 1.5rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: var(--surface); color: var(--text-dim);
+  font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 0.5rem 0.75rem; text-align: left;
+  border-bottom: 1px solid var(--border);
+  /* No sticky: `.table-wrap` has `overflow-x: auto` which makes it a
+     sticky scroll container, so `top: 3rem` would be measured from the
+     wrapper — not the viewport — pushing the thead down inside the
+     table and making the first tbody row render above it. Page-scroll
+     sticky and overflow-x wrappers are incompatible; pick overflow. */
+}
+tbody td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted); font-size: 0.875rem;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface); }
+
+/* ─────────────────────────────────────────────────────────────────
+   Component Library — phase badges, severity cards, lanes, dep paths,
+   arch blocks, eyebrows, item lists, data tables, component boxes
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Phase Badges ── */
+.phase {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+.phase.m0 { background: var(--success-dim); color: var(--success); }
+.phase.m1 { background: var(--warning-dim); color: var(--warning); }
+.phase.m2 { background: var(--info-dim); color: var(--info); }
+.phase.m3 { background: rgba(192,132,252,0.12); color: #c084fc; }
+
+/* ── Severity Cards ── */
+.card.critical { border-left: 3px solid var(--error); }
+.card.warning  { border-left: 3px solid var(--warning); }
+.card.info     { border-left: 3px solid var(--info); }
+
+/* ── Lane Containers ── */
+.lane {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.lane-header {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.lane-header.green-h  { background: var(--success-dim); color: var(--success); border-bottom: 1px solid rgba(52,211,153,0.2); }
+.lane-header.amber-h  { background: var(--warning-dim); color: var(--warning); border-bottom: 1px solid rgba(251,191,36,0.2); }
+.lane-header.cyan-h   { background: var(--info-dim); color: var(--info); border-bottom: 1px solid rgba(96,165,250,0.2); }
+.lane-header.purple-h { background: rgba(192,132,252,0.12); color: #c084fc; border-bottom: 1px solid rgba(192,132,252,0.2); }
+.lane-header.red-h    { background: var(--error-dim); color: var(--error); border-bottom: 1px solid rgba(248,113,113,0.2); }
+.lane-body { padding: 0.75rem; }
+
+/* ── Dependency Paths ── */
+.dep-path {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+.dep-path .arrow    { color: var(--warning); font-weight: 700; }
+.dep-path .parallel { color: var(--info); font-weight: 700; }
+
+/* ── Architecture Blocks ── */
+pre.arch {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  white-space: pre;
+}
+.c-green  { color: var(--success); }
+.c-amber  { color: var(--warning); }
+.c-cyan   { color: var(--info); }
+.c-red    { color: var(--error); }
+.c-purple { color: #c084fc; }
+.c-dim    { color: var(--text-dim); }
+.c-bright { color: var(--text); }
+
+/* ── Eyebrow Headers ── */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 0.25rem;
+}
+
+/* ── Item Lists ── */
+.item-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0;
+}
+.item-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+}
+.item-list li::before {
+  content: "→";
+  color: var(--warning);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.item-list li.green-arrow::before  { color: var(--success); }
+.item-list li.red-arrow::before    { color: var(--error); }
+.item-list li.cyan-arrow::before   { color: var(--info); }
+.item-list li.amber-arrow::before  { color: var(--warning); }
+
+/* ── Data Tables ── */
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.data-table th {
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  /* No sticky — see .table-wrap/thead th note above. Same constraint:
+     any ancestor with overflow-x: auto becomes the sticky scroll
+     container and breaks page-scroll sticky. */
+}
+table.data-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+table.data-table tr:last-child td { border-bottom: none; }
+table.data-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+[data-theme="light"] table.data-table tr:nth-child(even) td { background: rgba(0,0,0,0.025); }
+table.data-table tr:hover td { background: rgba(255,255,255,0.04); }
+[data-theme="light"] table.data-table tr:hover td { background: rgba(0,0,0,0.04); }
+table.data-table td.num {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Connectors ── */
+.connector {
+  height: 1px;
+  background: var(--border);
+  margin: 0.5rem 0;
+  flex-shrink: 0;
+}
+.connector-dashed {
+  height: 1px;
+  background: transparent;
+  border-top: 1px dashed var(--border);
+  margin: 0.5rem 0;
+  flex-shrink: 0;
+}
+
+/* ── Component Boxes ── */
+.component {
+  display: inline-flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  min-width: 80px;
+}
+.component-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+[data-theme="light"] .component-label { background: rgba(0,0,0,0.02); }
+.component-value {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--text);
+  padding: 0.375rem 0.5rem;
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   Info Cards — 3-column summary grid with tier-colored dot + list.
+   Use at the top of a split-file doc or architecture page to give
+   the reader a scannable "what / why / how" overview before diving
+   in. Pair with --arch-* tokens from tokens.md for tier-colored dots.
+
+   Example:
+     <div class="info-card-grid">
+       <div class="info-card">
+         <span class="info-card__dot" style="background:var(--arch-frontend)"></span>
+         <h3 class="info-card__title">Frontend</h3>
+         <ul class="info-card__list">
+           <li>React SPA</li>
+           <li>TanStack Router</li>
+         </ul>
+       </div>
+       ...
+     </div>
+   Source: architecture-diagram-generator skill.
+   ════════════════════════════════════════════════════════════════ */
+.info-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+.info-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 6px);
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.info-card__dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.info-card__title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.info-card__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.info-card__list li { padding: 0.125rem 0; }
+
+/* ══════════════════════════════════════════════════════════════════
+   Responsive — collapse gracefully at 768px
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .dep-path { flex-wrap: wrap; }
+
+  .component {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .lane-header,
+  .lane-body { padding: 0.5rem; }
+
+  .card { padding: 1rem; }
+  .card-label { font-size: 0.625rem; }
+  .card-title { font-size: 0.875rem; }
+
+  table.data-table th,
+  table.data-table td {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .arch { font-size: 0.75rem; }
+
+  .item-list li { gap: 0.25rem; }
+
+  .phase,
+  .eyebrow { font-size: 0.625rem; }
+
+  .phase { padding: 0.0625rem 0.375rem; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   editorial.css — warm technical document aesthetic (S6)
+   Inspired by nats-arch-roadmap.html. Overrides base tokens.
+
+   Fonts (add to <head>):
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+   Identity: rich roadmap / guide / architecture document
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Baseline Tokens — Editorial Dark ── */
+:root, [data-theme="dark"] {
+  color-scheme: light dark;
+  --bg:           #0d1117;
+  --surface:      #13191f;
+  --surface2:     #1a2028;
+  --border:       #21262d;
+  --border-bright: #2d333b;
+  --text:         #fafafa;
+  --text-muted:   #6b7280;
+  --text-dim:     #9ca3af;
+  --accent:       #fbbf24;
+  --accent-dim:   rgba(251,191,36,0.15);
+  --accent-glow:  rgba(251,191,36,0.2);
+}
+
+/* ── Baseline Tokens — Editorial Light ── */
+[data-theme="light"] {
+  --bg:           #f4f6f9;
+  --surface:      #ffffff;
+  --surface2:     #f0f2f5;
+  --border:       #d1d5db;
+  --border-bright: #9ca3af;
+  --text:         #111827;
+  --text-muted:   #6b7280;
+  --text-dim:     #374151;
+  --accent:       #d97706;
+  --accent-dim:   rgba(217,119,6,0.12);
+  --accent-glow:  rgba(217,119,6,0.15);
+}
+
+/* ── Semantic Color Tokens — Editorial Dark ── */
+:root, [data-theme="dark"] {
+  --success:     #4ade80;
+  --success-dim: rgba(74,222,128,0.10);
+  --warning:     #fbbf24;
+  --warning-dim: rgba(251,191,36,0.10);
+  --error:       #f87171;
+  --error-dim:   rgba(248,113,113,0.12);
+  --info:        #22d3ee;
+  --info-dim:    rgba(34,211,238,0.12);
+
+  /* Extended palette */
+  --cyan:        #22d3ee;
+  --cyan-dim:    rgba(34,211,238,0.12);
+  --green:       #4ade80;
+  --green-dim:   rgba(74,222,128,0.10);
+  --amber:       #fbbf24;
+  --amber-dim:   rgba(251,191,36,0.10);
+  --red:         #f87171;
+  --red-dim:     rgba(248,113,113,0.12);
+  --purple:      #c084fc;
+  --purple-dim:  rgba(192,132,252,0.10);
+}
+
+/* ── Semantic Color Tokens — Editorial Light ── */
+[data-theme="light"] {
+  --success:     #16a34a;
+  --success-dim: rgba(22,163,74,0.10);
+  --warning:     #d97706;
+  --warning-dim: rgba(217,119,6,0.10);
+  --error:       #dc2626;
+  --error-dim:   rgba(220,38,38,0.10);
+  --info:        #0891b2;
+  --info-dim:    rgba(8,145,178,0.10);
+
+  /* Extended palette */
+  --cyan:        #0891b2;
+  --cyan-dim:    rgba(8,145,178,0.10);
+  --green:       #16a34a;
+  --green-dim:   rgba(22,163,74,0.10);
+  --amber:       #d97706;
+  --amber-dim:   rgba(217,119,6,0.10);
+  --red:         #dc2626;
+  --red-dim:     rgba(220,38,38,0.10);
+  --purple:      #7c3aed;
+  --purple-dim:  rgba(124,58,237,0.10);
+}
+
+/* ── Editorial Light — OS preference (unless manually dark) ── */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:           #f4f6f9;
+    --surface:      #ffffff;
+    --surface2:     #f0f2f5;
+    --border:       #d1d5db;
+    --border-bright: #9ca3af;
+    --text:         #111827;
+    --text-muted:   #6b7280;
+    --text-dim:     #374151;
+    --accent:       #d97706;
+    --accent-dim:   rgba(217,119,6,0.12);
+    --accent-glow:  rgba(217,119,6,0.15);
+
+    --success:     #16a34a;
+    --success-dim: rgba(22,163,74,0.10);
+    --warning:     #d97706;
+    --warning-dim: rgba(217,119,6,0.10);
+    --error:       #dc2626;
+    --error-dim:   rgba(220,38,38,0.10);
+    --info:        #0891b2;
+    --info-dim:    rgba(8,145,178,0.10);
+
+    --cyan:        #0891b2;
+    --cyan-dim:    rgba(8,145,178,0.10);
+    --green:       #16a34a;
+    --green-dim:   rgba(22,163,74,0.10);
+    --amber:       #d97706;
+    --amber-dim:   rgba(217,119,6,0.10);
+    --red:         #dc2626;
+    --red-dim:     rgba(220,38,38,0.10);
+    --purple:      #7c3aed;
+    --purple-dim:  rgba(124,58,237,0.10);
+  }
+}
+
+/* ── Typography Overrides ── */
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Outfit', sans-serif;
+}
+
+code, pre, .mono {
+  font-family: 'Space Mono', monospace;
+}
+
+/* ── Header Pattern ── */
+.header-eyebrow {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--amber);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+header h1, .guide-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.3rem, 4vw, 1.9rem);
+  color: var(--text);
+  line-height: 1.15;
+}
+
+header h1 .accent { color: var(--amber); }
+
+.header-subtitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* ── Section Divider ── */
+.section-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border-bright), transparent);
+}
+
+/* ── Card Color Borders ── */
+.card.high   { border-left: 3px solid var(--red);    }
+.card.medium { border-left: 3px solid var(--amber);  }
+.card.low    { border-left: 3px solid var(--green);  }
+.card.info   { border-left: 3px solid var(--cyan);   }
+.card.tech   { border-left: 3px solid var(--purple); }
+
+/* ── Badge / Pill Colors ── */
+.badge.green,  .pill.green  { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(74,222,128,0.35);  }
+.badge.amber,  .pill.amber  { background: var(--amber-dim);  color: var(--amber);  border: 1px solid rgba(251,191,36,0.35);  }
+.badge.cyan,   .pill.cyan   { background: var(--cyan-dim);   color: var(--cyan);   border: 1px solid rgba(34,211,238,0.35);   }
+.badge.red,    .pill.red    { background: var(--red-dim);    color: var(--red);    border: 1px solid rgba(248,113,113,0.35);    }
+.badge.purple, .pill.purple { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(192,132,252,0.35); }
+
+/* ── ASCII Diagram Colors ── */
+pre .c-green  { color: var(--green);  }
+pre .c-amber  { color: var(--amber);  }
+pre .c-cyan   { color: var(--cyan);   }
+pre .c-purple { color: var(--purple); }
+pre .c-red    { color: var(--red);    }
+pre .c-dim    { color: var(--text-muted); }
+pre .c-bright { color: var(--text); }
+
+/* ══════════════════════════════════════════════════════════════════
+   Slide mode — editorial aesthetic (used by forge-slides)
+   Activated by .deck wrapping any .slide.slide--{type}.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Warm-editorial title slide: centered gold display, soft gold halo */
+.deck .slide--title {
+  background-image:
+    radial-gradient(ellipse at 50% 30%, var(--accent-glow) 0%, transparent 55%),
+    linear-gradient(to bottom, var(--bg), var(--surface));
+}
+.deck .slide--title .slide__display {
+  font-weight: 700;
+  letter-spacing: -3px;
+  background: linear-gradient(180deg, var(--accent), var(--text));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.deck .slide--title .slide__subtitle {
+  color: var(--text-dim);
+  border-top: 1px solid var(--border-bright);
+  padding-top: 1rem;
+}
+
+/* Content slide: left-aligned heading, semi-serif feel via letter-spacing */
+.deck .slide--content .slide__heading {
+  color: var(--text);
+  letter-spacing: -1px;
+}
+.deck .slide--content .slide__label {
+  color: var(--accent);
+}
+
+/* Closing slide: warm gold wash with bordered CTA */
+.deck .slide--closing {
+  background-image:
+    radial-gradient(ellipse at 50% 70%, var(--accent-dim) 0%, transparent 60%),
+    linear-gradient(to top, var(--bg), var(--surface));
+}
+.deck .slide--closing .slide__heading {
+  color: var(--accent);
+  font-weight: 600;
+}
+.deck .slide--closing .cta {
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.deck .slide--section .slide__number {
+  color: var(--accent);
+  opacity: 0.06;
+}
+
+
+/* ── single-file guide extras ── */
+body { font-family: 'Inter', system-ui, sans-serif; }
+h1,h2,h3,h4 { font-family: 'Outfit', system-ui, sans-serif; }
+code, pre code { font-family: 'Space Mono', ui-monospace, monospace; }
+
+/* hero */
+.hero { border-left: 4px solid var(--accent); padding: 1.25rem 0 1.25rem 1.25rem; margin-bottom: 1.75rem; }
+.hero .eyebrow { color: var(--accent); }
+.hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: .5rem; }
+.hero p.lede { font-size: 1.05rem; color: var(--text-dim); max-width: 60ch; }
+
+/* section label */
+.section-label { display:flex; align-items:center; gap:.5rem; font-size:.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--text-muted); margin:2rem 0 .75rem; }
+.section-label::before { content:""; width:.5rem; height:.5rem; background:var(--accent); border-radius:2px; display:inline-block; }
+
+/* stat grid */
+.stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.75rem; margin:1.25rem 0 1.5rem; }
+.stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.875rem 1rem; }
+.stat .num { font-family:'Outfit',sans-serif; font-size:1.5rem; font-weight:700; color:var(--accent); line-height:1.1; }
+.stat .lbl { font-size:.75rem; color:var(--text-muted); margin-top:.25rem; }
+
+/* steps */
+.steps { list-style:none; padding-left:0; counter-reset:step; }
+.steps > li { position:relative; padding-left:2.25rem; margin-bottom:1rem; }
+.steps > li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:0; width:1.5rem; height:1.5rem; background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); border-radius:50%; display:grid; place-items:center; font-size:.75rem; font-weight:700; font-family:'Outfit',sans-serif; }
+
+/* io strip */
+.io-strip { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem 1rem; margin:1rem 0; font-size:.8125rem; }
+.io-strip .node { background:var(--surface2); border:1px solid var(--border-bright); border-radius:4px; padding:.25rem .5rem; font-family:'Space Mono',monospace; }
+.io-strip .arr { color:var(--accent); font-weight:700; }
+
+/* finding */
+.finding { border-left:3px solid var(--border); background:var(--surface); border-radius:var(--radius-sm); padding:.875rem 1rem; margin-bottom:.75rem; }
+.finding .badge { font-size:.625rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.0625rem .375rem; border-radius:3px; margin-right:.5rem; }
+.finding--high { border-left-color:var(--error); }
+.finding--high .badge { background:var(--error-dim); color:var(--error); }
+.finding--medium { border-left-color:var(--warning); }
+.finding--medium .badge { background:var(--warning-dim); color:var(--warning); }
+.finding--low { border-left-color:var(--info); }
+.finding--low .badge { background:var(--info-dim); color:var(--info); }
+.finding .ft { font-weight:600; color:var(--text); font-size:.9375rem; }
+.finding p { margin:.375rem 0 0; font-size:.8125rem; }
+
+/* disclosure */
+details.disclosure { border:1px solid var(--border); border-radius:var(--radius-sm); padding:.5rem .875rem; margin:.75rem 0; background:var(--surface); }
+details.disclosure summary { cursor:pointer; font-weight:600; color:var(--text); font-size:.875rem; }
+details.disclosure[open] summary { margin-bottom:.5rem; }
+
+.kv-strip { display:flex; flex-wrap:wrap; gap:.5rem 1.25rem; font-size:.8125rem; margin:.75rem 0; color:var(--text-muted); }
+.kv-strip b { color:var(--text); font-weight:600; }
+.pill { display:inline-block; font-size:.6875rem; font-weight:600; padding:.125rem .5rem; border-radius:99px; background:var(--surface2); border:1px solid var(--border-bright); color:var(--text-muted); }
+a.ext { color:var(--accent); text-decoration:none; border-bottom:1px dotted var(--accent); }
+
+
+    /* AESTHETIC_STYLES: Aesthetic CSS override (empty if no aesthetic selected) */
+    
+
+    /* EXTRA_STYLES: Diagram-specific CSS additions */
+    
+  </style>
+</head>
+<body>
+  <!-- CONTENT: Self-contained diagram body — hero section + sections + diagrams + cards
+       Info-card grid pattern (3-col summary row — drop in above diagrams):
+
+         <div class="info-card-grid">
+           <div class="info-card">
+             <span class="info-card__dot" style="background: var(--arch-frontend)"></span>
+             <h3 class="info-card__title">Frontend</h3>
+             <ul class="info-card__list">
+               <li>React SPA</li>
+               <li>TanStack Router</li>
+             </ul>
+           </div>
+           <div class="info-card">
+             <span class="info-card__dot" style="background: var(--arch-backend)"></span>
+             <h3 class="info-card__title">Backend</h3>
+             <ul class="info-card__list"><li>...</li></ul>
+           </div>
+           <div class="info-card">
+             <span class="info-card__dot" style="background: var(--arch-database)"></span>
+             <h3 class="info-card__title">Database</h3>
+             <ul class="info-card__list"><li>...</li></ul>
+           </div>
+         </div>
+
+       The `.info-card-grid` primitive is defined in base/components.css; the
+       `--arch-*` tier palette comes from references/tokens.md. -->
+  <nav class="topnav">
+  <span class="nav-title">LLM API Reseller — Build Guide</span>
+  <div class="tabs" role="tablist">
+    <button class="tab-btn" role="tab" data-tab="overview">Overview</button>
+    <button class="tab-btn" role="tab" data-tab="arch">Architecture</button>
+    <button class="tab-btn" role="tab" data-tab="auth">Auth · Better Auth</button>
+    <button class="tab-btn" role="tab" data-tab="pay">Payments · Razorpay</button>
+    <button class="tab-btn" role="tab" data-tab="flows">Flows &amp; APIs</button>
+    <button class="tab-btn" role="tab" data-tab="gotchas">Gotchas &amp; Launch</button>
+  </div>
+</nav>
+
+<!-- ========== OVERVIEW ========== -->
+<section class="panel" data-panel="overview" role="tabpanel">
+  <div class="hero">
+    <div class="eyebrow">Architecture · Build Guide · 2026-07-14</div>
+    <h1>Resell LLM access without building auth, keys, or limits</h1>
+    <p class="lede">Put <b>LiteLLM Proxy</b> in front of real providers. Customers self-signup with <b>Better Auth</b>, pay with <b>Razorpay</b>, and get a metered API key. LiteLLM enforces budget + rate limits. You write ~4 endpoints of glue.</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="num">4</div><div class="lbl">components to run</div></div>
+    <div class="stat"><div class="num">1</div><div class="lbl">webhook to handle</div></div>
+    <div class="stat"><div class="num">~4</div><div class="lbl">LiteLLM admin calls</div></div>
+    <div class="stat"><div class="num">0</div><div class="lbl">auth/rate-limit code you own</div></div>
+  </div>
+
+  <div class="section-label">The idea in one strip</div>
+  <div class="io-strip">
+    <span class="node">Customer</span><span class="arr">→</span>
+    <span class="node">Your app (Better Auth + Razorpay)</span><span class="arr">→</span>
+    <span class="node">LiteLLM Proxy</span><span class="arr">→</span>
+    <span class="node">OpenAI / Anthropic</span>
+  </div>
+  <p>Your app is the <b>control plane</b> (signup, billing, key minting). LiteLLM is the <b>data plane</b> — customers send their <code>sk-...</code> key straight to it, you stay out of the latency path.</p>
+
+  <div class="section-label">What each tool owns</div>
+  <div class="info-card-grid">
+    <div class="info-card">
+      <span class="info-card__dot" style="background:var(--info)"></span>
+      <h3 class="info-card__title">LiteLLM</h3>
+      <ul class="info-card__list">
+        <li>Virtual API keys</li>
+        <li>Budgets + rate limits</li>
+        <li>Spend tracking</li>
+        <li>Provider routing</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <span class="info-card__dot" style="background:var(--success)"></span>
+      <h3 class="info-card__title">Better Auth</h3>
+      <ul class="info-card__list">
+        <li>Signup / login</li>
+        <li>Email verify + OAuth</li>
+        <li>Sessions</li>
+        <li>Owns user table</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <span class="info-card__dot" style="background:var(--warning)"></span>
+      <h3 class="info-card__title">Razorpay</h3>
+      <ul class="info-card__list">
+        <li>Checkout (INR)</li>
+        <li>Orders / Subscriptions</li>
+        <li>Payment webhooks</li>
+        <li>Signature verify</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card accent">
+    <div class="card-label">Core decision</div>
+    <div class="card-title">Model each customer as a LiteLLM <em>user</em>, not just a key</div>
+    <div class="card-body">Budget lives on the user, survives key rotation, aggregates across a customer's keys (prevents budget-bypass), and gives one clean <code>/user/info</code> view. Cost: one extra API call at signup. Worth it.</div>
+  </div>
+
+  <div class="kv-strip">
+    <span><b>Stack:</b> Next.js + Postgres + LiteLLM + Redis</span>
+    <span><b>Region:</b> India (Razorpay, INR)</span>
+    <span><b>Identity key:</b> Better Auth <code>user.id</code> == LiteLLM <code>user_id</code></span>
+  </div>
+</section>
+
+<!-- ========== ARCHITECTURE ========== -->
+<section class="panel" data-panel="arch" role="tabpanel">
+  <div class="section-label">System diagram</div>
+<pre class="arch"><span class="c-dim">Customer ──signup──▶</span> <span class="c-green">Next.js App</span>
+             <span class="c-dim">login/pay──▶</span>  ├─ <span class="c-green">Better Auth</span>  (self-hosted)
+                          ├─ <span class="c-amber">Razorpay</span>     (payments)
+                          └─ <span class="c-cyan">Postgres A</span>   (app + auth + customers)
+                                 │
+                                 │  admin API (master key, <span class="c-red">server-side only</span>)
+                                 ▼
+<span class="c-dim">Customer app ─sk-…─▶</span> <span class="c-cyan">LiteLLM Proxy</span> ──▶ OpenAI / Anthropic / …
+                          ├─ <span class="c-cyan">Postgres B</span>  (keys, budgets, spend logs)
+                          └─ <span class="c-purple">Redis</span>       (shared rate-limit counters)
+</pre>
+
+  <div class="section-label">The four services</div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Component</th><th>Role</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><b>Next.js app</b></td><td>Signup, login, billing, dashboard, key minting</td><td>Vercel</td></tr>
+        <tr><td><b>LiteLLM Proxy</b></td><td>Keys, budgets, rate limits, spend, routing</td><td>Railway / Fly (Docker)</td></tr>
+        <tr><td><b>Postgres ×2</b></td><td>A = your app/auth; B = LiteLLM's own DB</td><td>Neon / managed</td></tr>
+        <tr><td><b>Redis</b></td><td>Shared rate-limit + budget counters</td><td>Upstash</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="finding finding--high">
+    <span class="badge">Critical</span><span class="ft">Keep the two Postgres databases separate</span>
+    <p>LiteLLM runs its own Prisma migrations on boot. Don't share its DB with Better Auth — schema collisions and upgrade pain. Two DBs, one Redis.</p>
+  </div>
+  <div class="finding finding--medium">
+    <span class="badge">Note</span><span class="ft">Redis is mandatory the moment you run &gt;1 LiteLLM replica</span>
+    <p>Without it, each replica counts rate limits locally and customers get more throughput than you sold.</p>
+  </div>
+
+  <div class="section-label">Data-plane vs control-plane</div>
+  <p>Your app <b>never proxies LLM traffic.</b> It only calls LiteLLM's admin API (with the master key) to mint/adjust keys. Customer's LLM requests go <b>directly</b> to the LiteLLM proxy URL using their own <code>sk-...</code> key. This keeps your app off the hot path and means an app outage doesn't stop paying customers from calling models.</p>
+</section>
+
+<!-- ========== AUTH ========== -->
+<section class="panel" data-panel="auth" role="tabpanel">
+  <div class="section-label">Better Auth — self-hosted, you own the users</div>
+  <p>Unlike a hosted SaaS, Better Auth is a library in <em>your</em> Next.js app. No external signup webhook — user provisioning happens in-process via a database hook. That's simpler: the LiteLLM call runs right after the user row commits.</p>
+
+  <div class="kv-strip">
+    <span><b>Adapter:</b> Drizzle/Prisma → Postgres A</span>
+    <span><b>Session:</b> cookie (default)</span>
+    <span><b>Tables it creates:</b> user, session, account, verification</span>
+  </div>
+
+  <div class="section-label">Config + provisioning hook</div>
+<pre><code>// auth.ts
+export const auth = betterAuth({
+  database: drizzleAdapter(db, { provider: "pg" }),
+  emailAndPassword: { enabled: true, requireEmailVerification: true },
+  socialProviders: { google: { clientId: ..., clientSecret: ... } },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) =&gt; {
+          // provision LiteLLM user (free tier) right after signup
+          await litellm("/user/new", {
+            user_id: user.id,          // reuse Better Auth id verbatim
+            user_email: user.email,
+            max_budget: 1.0,           // free tier ($)
+            budget_duration: "30d",
+            models: ["gpt-4o-mini"],   // cheap-only until they pay
+            rpm_limit: 20,
+          });
+          await db.insert(customers).values({
+            userId: user.id, litellmUserId: user.id,
+            tier: "free", litellmProvisioned: true,
+          });
+        },
+      },
+    },
+  },
+});</code></pre>
+
+  <div class="finding finding--medium">
+    <span class="badge">Design</span><span class="ft">Gate free-tier provisioning behind verified email</span>
+    <p>Public signup + free credit = bot bait. Either provision lazily on first verified login / first "generate key" click, or keep free-tier <code>models</code> to the cheapest one only. Make <code>/user/new</code> idempotent so retries are safe.</p>
+  </div>
+
+  <div class="section-label">Your extra table (alongside Better Auth's)</div>
+<pre><code>CREATE TABLE customers (
+  user_id              TEXT PRIMARY KEY REFERENCES "user"(id),
+  litellm_user_id      TEXT NOT NULL,             -- == user_id
+  tier                 TEXT NOT NULL DEFAULT 'free',
+  razorpay_customer_id TEXT,
+  credit_balance_inr   BIGINT DEFAULT 0,          -- optional display mirror
+  litellm_provisioned  BOOLEAN NOT NULL DEFAULT false,
+  created_at           TIMESTAMPTZ DEFAULT now()
+);
+
+-- idempotency ledger for Razorpay webhooks
+CREATE TABLE processed_payments (
+  event_id     TEXT PRIMARY KEY,   -- razorpay payment/event id
+  processed_at TIMESTAMPTZ DEFAULT now()
+);</code></pre>
+
+  <details class="disclosure">
+    <summary>Why store <code>credit_balance_inr</code> if LiteLLM is the source of truth?</summary>
+    <p>Only to render "₹ credits left" in your own currency without an API call per page load. The real budget of record is LiteLLM's <code>max_budget</code> (USD, priced against provider costs). If you don't need INR display, drop the column and read straight from <code>/user/info</code>.</p>
+  </details>
+</section>
+
+<!-- ========== PAYMENTS ========== -->
+<section class="panel" data-panel="pay" role="tabpanel">
+  <div class="section-label">Razorpay — two models</div>
+  <div class="cards">
+    <div class="card accent">
+      <div class="card-label">Recommended</div>
+      <div class="card-title">Prepaid credits</div>
+      <div class="card-body">Customer buys ₹X → Order → Checkout → <code>payment.captured</code> webhook → raise <code>max_budget</code>. Set <code>budget_duration: null</code> for a lifetime balance. No proration, cashflow-positive.</div>
+    </div>
+    <div class="card info">
+      <div class="card-label">Optional</div>
+      <div class="card-title">Subscription</div>
+      <div class="card-body">Razorpay Plans + Subscriptions. Each <code>subscription.charged</code> → set <code>max_budget</code> + <code>budget_duration: "30d"</code>. Predictable revenue; you eat overage risk.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Prepaid flow — create order</div>
+<pre><code>// server
+const order = await razorpay.orders.create({
+  amount: amountPaise,   // INR in paise (integer): ₹100 = 10000
+  currency: "INR",
+  notes: { user_id: user.id },
+});
+// frontend opens Checkout with order.id
+</code></pre>
+
+  <div class="section-label">Two different signatures — don't mix them</div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Where</th><th>Secret</th><th>HMAC over</th></tr></thead>
+      <tbody>
+        <tr><td>Client return (instant UI)</td><td><code>KEY_SECRET</code></td><td><code>order_id + "|" + payment_id</code></td></tr>
+        <tr><td>Webhook (source of truth)</td><td><code>WEBHOOK_SECRET</code></td><td>raw request body bytes</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+<pre><code>// webhook verify — WEBHOOK_SECRET, over RAW body
+const expected = crypto
+  .createHmac("sha256", RAZORPAY_WEBHOOK_SECRET)
+  .update(rawRequestBody)                 // pre-JSON-parse bytes
+  .digest("hex");
+if (expected !== req.headers["x-razorpay-signature"]) return 400;
+</code></pre>
+
+  <div class="section-label">On confirmed payment → raise LiteLLM budget</div>
+<pre><code>// idempotency first
+if (await alreadyProcessed(event.id)) return 200;
+
+await litellm("/user/update", {
+  user_id: order.notes.user_id,
+  max_budget: currentBudget + creditedUsd,  // INR→USD w/ your margin
+  budget_duration: null,                     // lifetime credit
+});
+await markProcessed(event.id);
+</code></pre>
+
+  <div class="section-label">Webhook events to handle</div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Event</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td><code>payment.captured</code></td><td>Prepaid confirmed → raise <code>max_budget</code></td></tr>
+        <tr><td><code>subscription.charged</code></td><td>Cycle paid → set budget + <code>budget_duration</code></td></tr>
+        <tr><td><code>subscription.cancelled</code></td><td>Stop access → budget 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="finding finding--medium">
+    <span class="badge">Trust</span><span class="ft">Bump budget in the webhook, not the client redirect</span>
+    <p>The browser callback can be dropped (tab closed). Use client-verify only for instant UI feedback; do the real budget change on <code>payment.captured</code>.</p>
+  </div>
+</section>
+
+<!-- ========== FLOWS ========== -->
+<section class="panel" data-panel="flows" role="tabpanel">
+  <div class="section-label">End-to-end</div>
+  <ol class="steps">
+    <li><b>Signup</b> (Better Auth) → <code>databaseHooks.user.create.after</code> → <code>POST /user/new</code> (free tier).</li>
+    <li><b>Generate key</b> — dashboard button → your server route → <code>POST /key/generate</code> → show <code>sk-...</code> once.</li>
+    <li><b>Buy credits</b> — Razorpay Order → Checkout → <code>payment.captured</code> webhook.</li>
+    <li><b>Raise budget</b> — verify sig → idempotency check → <code>POST /user/update</code> (bump <code>max_budget</code>).</li>
+    <li><b>Use</b> — customer calls LiteLLM proxy with <code>sk-...</code>; budget + rate enforced automatically.</li>
+    <li><b>Dashboard</b> — <code>GET /user/info</code> → spend + remaining budget.</li>
+  </ol>
+
+  <div class="section-label">LiteLLM admin API — the whole surface you touch</div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Call</th><th>When</th><th>Key fields</th></tr></thead>
+      <tbody>
+        <tr><td><code>POST /user/new</code></td><td>Signup</td><td>user_id, max_budget, budget_duration, models, rpm_limit</td></tr>
+        <tr><td><code>POST /key/generate</code></td><td>User clicks generate</td><td>user_id, key_alias → returns <code>sk-...</code></td></tr>
+        <tr><td><code>POST /user/update</code></td><td>Payment / tier change</td><td>user_id, max_budget, models</td></tr>
+        <tr><td><code>GET /user/info</code></td><td>Dashboard</td><td>spend, max_budget, keys</td></tr>
+        <tr><td><code>POST /key/delete</code></td><td>Rotate / offboard</td><td>keys[]</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <details class="disclosure">
+    <summary>Key generation route (server-side, holds master key)</summary>
+<pre><code>// app/api/keys/generate/route.ts
+export async function POST() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return new Response("Unauthorized", { status: 401 });
+
+  await ensureLiteLLMUser(session.user.id, session.user.email); // idempotent
+  const { key } = await litellm("/key/generate", { user_id: session.user.id });
+  return Response.json({ key });   // shown once, never stored raw
+}</code></pre>
+  </details>
+
+  <div class="finding finding--low">
+    <span class="badge">UX</span><span class="ft">Never store the raw <code>sk-...</code> key</span>
+    <p>Show it once. LiteLLM keeps the hash. Lost key → "rotate" button = <code>/key/delete</code> + <code>/key/generate</code>. Budget survives because it lives on the user.</p>
+  </div>
+</section>
+
+<!-- ========== GOTCHAS ========== -->
+<section class="panel" data-panel="gotchas" role="tabpanel">
+  <div class="section-label">Razorpay gotchas</div>
+  <div class="finding finding--high">
+    <span class="badge">Critical</span><span class="ft">Two secrets: KEY_SECRET ≠ WEBHOOK_SECRET</span>
+    <p>Client-return signature uses <code>KEY_SECRET</code>; webhook body HMAC uses <code>WEBHOOK_SECRET</code>. Mixing them is the #1 Razorpay bug.</p>
+  </div>
+  <div class="finding finding--high">
+    <span class="badge">Critical</span><span class="ft">Webhook HMAC is over the RAW body</span>
+    <p>If your framework parses JSON before you hash, the signature won't match. Capture raw bytes in the webhook route.</p>
+  </div>
+  <div class="finding finding--medium">
+    <span class="badge">Money</span><span class="ft">INR paise + auto-capture</span>
+    <p>Amounts are integer paise (₹100 = 10000). Set <code>payment_capture: 1</code> or money sits authorized-not-captured. Convert INR→USD budget with margin; re-check rate periodically.</p>
+  </div>
+  <div class="finding finding--medium">
+    <span class="badge">Money</span><span class="ft">Subscription cycle ≠ LiteLLM reset window</span>
+    <p>Razorpay bills on its schedule; LiteLLM <code>budget_duration</code> resets from budget creation time. On each <code>subscription.charged</code>, explicitly re-set the budget instead of trusting the two to stay aligned.</p>
+  </div>
+  <div class="finding finding--low">
+    <span class="badge">Setup</span><span class="ft">Test vs live keys</span>
+    <p>Separate key pairs and webhook secrets. Verify you flipped to live before launch — test keys never move real money.</p>
+  </div>
+
+  <div class="section-label">Better Auth &amp; LiteLLM gotchas</div>
+  <div class="finding finding--high">
+    <span class="badge">Security</span><span class="ft">Master key stays server-side, forever</span>
+    <p>It's root over your whole LLM spend. Only your API routes/server actions touch it. Never in client components, never exposed by Better Auth.</p>
+  </div>
+  <div class="finding finding--medium">
+    <span class="badge">Reliability</span><span class="ft">Provisioning gap → reconciliation</span>
+    <p>If <code>/user/new</code> fails in the hook, a Better Auth user exists with no LiteLLM account. Mark <code>litellm_provisioned:false</code> and run a small retry job (cron or on-login) over <code>false</code> rows. Requires idempotent <code>/user/new</code>.</p>
+  </div>
+  <div class="finding finding--medium">
+    <span class="badge">Routes</span><span class="ft">Webhook route is public — guard by signature, not session</span>
+    <p>Razorpay calls it unauthenticated. Verify HMAC only. Don't require a Better Auth session there (and don't leave dashboard routes session-less).</p>
+  </div>
+  <div class="finding finding--low">
+    <span class="badge">Ops</span><span class="ft">Pin LiteLLM to <code>main-stable</code></span>
+    <p>Admin API moves fast. A floating <code>main-latest</code> tag can break your integration overnight. Back up Postgres B before upgrades (boot-time migrations).</p>
+  </div>
+  <div class="finding finding--low">
+    <span class="badge">Money</span><span class="ft">Cost estimate ≠ real provider bill</span>
+    <p>LiteLLM prices from its internal map; budget checks are per-request (a single call can nudge slightly over). Reconcile against your real OpenAI/Anthropic invoice monthly; price customers with margin + headroom.</p>
+  </div>
+
+  <div class="section-label">Laziest reliable launch</div>
+  <ol class="steps">
+    <li>LiteLLM + Postgres B + Redis on Railway/Fly; provider keys in <code>config.yaml</code>; pin <code>main-stable</code>.</li>
+    <li>Next.js on Vercel: Better Auth (Postgres A) + Razorpay live keys.</li>
+    <li>One webhook: <code>/api/webhooks/razorpay</code> → raw-body verify → idempotency → <code>/user/update</code>.</li>
+    <li>Dashboard: generate-key button + usage from <code>/user/info</code>.</li>
+    <li>Monthly: reconcile LiteLLM spend vs real provider invoice.</li>
+  </ol>
+  <div class="kv-strip">
+    <span class="pill">skip: subscription proration</span>
+    <span class="pill">skip: multi-currency</span>
+    <span class="pill">skip: per-request analytics</span>
+    <span>— add when you have paying volume.</span>
+  </div>
+</section>
+
+
+  <!-- Theme Toggle -->
+  <button class="theme-btn" id="theme-toggle" aria-label="Toggle color theme" aria-pressed="false">◑ light</button>
+
+  <script>
+    /* THEME_TOGGLE_JS: theme-toggle.js content with {NAME} already substituted.
+       Must run before any script that reads data-theme. */
+    /* ══════════════════════════════════════════════════════════════════
+   theme-toggle.js — dark/light theme toggle with localStorage persistence
+   Part of forge base/ layer.
+
+   IMPORTANT: Before inlining, substitute llm-reseller-guide with the diagram's
+   kebab-case slug. The localStorage key uses it to scope per-diagram.
+
+   Requires: <button id="theme-toggle"> in shell templates (single.html, split.html).
+   For gallery templates, use gallery-base.js initTheme() with id="themeBtn" instead.
+   ══════════════════════════════════════════════════════════════════ */
+
+;(() => {
+  var THEME_KEY = 'diag-llm-reseller-guide-theme'
+  var saved = localStorage.getItem(THEME_KEY) || 'dark'
+  document.documentElement.setAttribute('data-theme', saved)
+  var themeBtn = document.getElementById('theme-toggle')
+  if (themeBtn) {
+    themeBtn.textContent = saved === 'dark' ? '◑ light' : '◑ dark'
+    themeBtn.setAttribute('aria-pressed', saved === 'light' ? 'true' : 'false')
+    themeBtn.addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme')
+      var next = cur === 'dark' ? 'light' : 'dark'
+      document.documentElement.setAttribute('data-theme', next)
+      localStorage.setItem(THEME_KEY, next)
+      this.textContent = next === 'dark' ? '◑ light' : '◑ dark'
+      this.setAttribute('aria-pressed', next === 'light' ? 'true' : 'false')
+    })
+  }
+})()
+
+  </script>
+  <!-- EXTRA_SCRIPTS: Mermaid init + pan/zoom + reveal observer -->
+  <script>
+    /* single-file tab switcher */
+;(() => {
+  function activate(id){
+    document.querySelectorAll('[data-tab]').forEach(t=>{
+      const on = t.dataset.tab===id;
+      t.classList.toggle('active',on);
+      t.setAttribute('aria-selected',on?'true':'false');
+      t.setAttribute('tabindex',on?'0':'-1');
+    });
+    document.querySelectorAll('[data-panel]').forEach(p=>{
+      p.classList.toggle('active',p.dataset.panel===id);
+    });
+    if(location.hash!=='#'+id) history.replaceState(null,'','#'+id);
+  }
+  document.querySelectorAll('[data-tab]').forEach(t=>{
+    t.addEventListener('click',()=>activate(t.dataset.tab));
+    t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();activate(t.dataset.tab);} });
+  });
+  const start=(location.hash||'').replace('#','');
+  const first=document.querySelector('[data-tab]');
+  activate(document.querySelector('[data-tab="'+start+'"]')?start:(first&&first.dataset.tab));
+})();
+
+  </script>
+</body>
+</html>
