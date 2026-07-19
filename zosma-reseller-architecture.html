@@ -1,0 +1,2429 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#6366f1">
+<title>Zosma LLM Reseller — Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d0f14; --surface:#141821; --surface2:#1b2029; --line:#252b37;
+    --text:#e6e9ef; --text-dim:#aab2c0; --text-muted:#6b7482;
+    --accent:#818cf8; --accent-dim:#6366f1;
+    --cyan:#22d3ee; --amber:#fbbf24; --purple:#a78bfa; --green:#34d399; --red:#f87171;
+  }
+  [data-theme="light"]{
+    --bg:#f7f8fa; --surface:#ffffff; --surface2:#f1f3f7; --line:#e2e6ee;
+    --text:#1a1f28; --text-dim:#3f4756; --text-muted:#7a8391; --accent:#6366f1; --accent-dim:#4f46e5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.86em}
+  a{color:var(--accent)}
+  .topnav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:.7rem 1.25rem}
+  .nav-title{font-weight:700;letter-spacing:-.01em;font-size:.95rem;color:var(--text-dim)}
+  .tabs{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.6rem}
+  .tab-btn{font:inherit;font-size:.9rem;font-weight:600;color:var(--text-muted);background:transparent;border:0;border-radius:7px;padding:.4rem .8rem;cursor:pointer;transition:color .15s,background .15s}
+  .tab-btn:hover{color:var(--text-dim);background:var(--surface)}
+  .tab-btn.active{color:var(--accent);background:var(--surface)}
+  .panel{display:none;padding:2.25rem 1.5rem;max-width:1000px;margin:0 auto}
+  .panel.active{display:block;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .hero{border-left:4px solid var(--accent);padding:.4rem 0 .4rem 1.25rem;margin-bottom:2rem}
+  .eyebrow{color:var(--accent);font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+  .hero h1{font-size:2rem;font-weight:800;letter-spacing:-.02em;margin:.35rem 0 .5rem}
+  .lede{font-size:1.06rem;color:var(--text-dim);max-width:64ch;margin:0}
+  h2{font-size:1.35rem;font-weight:700;letter-spacing:-.01em;margin:2.4rem 0 .4rem}
+  h2:first-of-type{margin-top:.5rem}
+  h3{font-size:1.02rem;font-weight:600;margin:1.4rem 0 .3rem}
+  p{color:var(--text-dim);margin:.5rem 0}
+  ul{color:var(--text-dim);padding-left:1.15rem}
+  li{margin:.2rem 0}
+  .sub{color:var(--text-muted);font-size:.9rem}
+  iframe.diagram{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:1rem 0 .5rem;display:block}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin:1.25rem 0}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.85rem 1rem}
+  .stat .n{font-size:1.5rem;font-weight:800;letter-spacing:-.02em}
+  .stat .l{color:var(--text-muted);font-size:.8rem;margin-top:.15rem}
+  .idx{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.75rem;margin:1rem 0}
+  .idx a{display:block;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.85rem 1rem;text-decoration:none;transition:border-color .15s}
+  .idx a:hover{border-color:var(--accent)}
+  .idx .t{font-weight:700;color:var(--text)}
+  .idx .d{color:var(--text-muted);font-size:.85rem;margin-top:.2rem}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:1.15rem 1.3rem;margin:1rem 0}
+  .card.accent{border-left:3px solid var(--accent)}
+  .card h3{margin-top:0}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-dim);background:var(--surface2);border:1px solid var(--line);border-radius:5px;padding:.1rem .4rem;margin:.15rem .25rem .15rem 0}
+  .dot{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;margin-right:.4rem;vertical-align:middle}
+  .why{color:var(--text-muted);font-size:.92rem;margin-top:.5rem}
+  .why b{color:var(--text-dim)}
+  .foot{max-width:1000px;margin:1rem auto 3rem;padding:0 1.5rem;color:var(--text-muted);font-size:.82rem}
+  .theme-btn{position:fixed;bottom:1rem;right:1rem;z-index:30;font:inherit;font-size:.8rem;color:var(--text-dim);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:.4rem .7rem;cursor:pointer}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <span class="nav-title">Zosma LLM Reseller · Architecture</span>
+  <div class="tabs" role="tablist">
+    <button class="tab-btn" role="tab" data-tab="overview">Overview</button>
+    <button class="tab-btn" role="tab" data-tab="components">Components</button>
+    <button class="tab-btn" role="tab" data-tab="flows">Flows</button>
+    <button class="tab-btn" role="tab" data-tab="decisions">Decisions</button>
+  </div>
+</nav>
+
+<!-- OVERVIEW -->
+<section class="panel" data-panel="overview" role="tabpanel">
+  <div class="hero">
+    <div class="eyebrow">Architecture · 2026-07-19</div>
+    <h1>A metered API key in front of our own model</h1>
+    <p class="lede">Users sign in with Google, get provisioned an org + LiteLLM user + API key on first load, and call a LiteLLM proxy under a per-user daily request quota. A dashboard shows live usage. The system splits into two planes over two shared stores.</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="n">2</div><div class="l">planes (control · data)</div></div>
+    <div class="stat"><div class="n">500</div><div class="l">default daily req cap</div></div>
+    <div class="stat"><div class="n">INCR</div><div class="l">atomic quota counter</div></div>
+    <div class="stat"><div class="n">34</div><div class="l">tests (unit + e2e)</div></div>
+  </div>
+
+  <h2>System context</h2>
+  <p>The control plane calls LiteLLM <b>admin</b> endpoints with the master key (provisioning). Customers call the <b>inference</b> endpoint with their own generated key. Different auth, different callers.</p>
+  <iframe class="diagram" loading="lazy" height="560" srcdoc="<!DOCTYPE html>
+<html lang=&quot;en&quot; data-theme=&quot;dark&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;>
+<meta name=&quot;generator&quot; content=&quot;lumen / fgraph deterministic renderer&quot;>
+<title>System context</title>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+<link href=&quot;https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=Outfit:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   midnight-editorial.css — deep navy, serif display, warm gold accents.
+   Cinematic, premium magazine feel. Dark-first.
+
+   Identity: editorial decks, narrative presentations, premium reports.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ──
+   Add to <head>:
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+   <link href=&quot;https://fonts.googleapis.com/css2?family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+*/
+
+/* ── Baseline Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	color-scheme: light dark;
+
+	/* Surfaces */
+	--bg: #0f1729;
+	--surface: #162040;
+	--surface2: #1d2b52;
+	--surface-elevated: #243362;
+	--border: rgba(200, 180, 140, 0.08);
+	--border-bright: rgba(200, 180, 140, 0.16);
+
+	/* Text */
+	--text: #e8e4d8;
+	--text-dim: #9a9484;
+	--text-muted: #7a7468;
+
+	/* Accent — warm gold */
+	--accent: #d4a73a;
+	--accent-dim: rgba(212, 167, 58, 0.1);
+	--accent-glow: rgba(212, 167, 58, 0.25);
+
+	/* Code */
+	--code-bg: #0a0f1e;
+	--code-text: #d4d0c4;
+}
+
+/* ── Baseline Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--bg: #faf8f2;
+	--surface: #ffffff;
+	--surface2: #f5f0e6;
+	--surface-elevated: #fffdf5;
+	--border: rgba(30, 30, 50, 0.08);
+	--border-bright: rgba(30, 30, 50, 0.16);
+
+	--text: #1a1814;
+	--text-dim: #7a7468;
+	--text-muted: #9a9484;
+
+	--accent: #b8860b;
+	--accent-dim: rgba(184, 134, 11, 0.08);
+	--accent-glow: rgba(184, 134, 11, 0.2);
+
+	--code-bg: #2a2520;
+	--code-text: #e8e4d8;
+}
+
+/* ── Semantic Color Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	--success: #4ade80;
+	--success-dim: rgba(74, 222, 128, 0.1);
+	--warning: #fbbf24;
+	--warning-dim: rgba(251, 191, 36, 0.1);
+	--error: #f87171;
+	--error-dim: rgba(248, 113, 113, 0.12);
+	--info: #22d3ee;
+	--info-dim: rgba(34, 211, 238, 0.12);
+
+	/* Extended palette */
+	--cyan: #22d3ee;
+	--cyan-dim: rgba(34, 211, 238, 0.12);
+	--green: #4ade80;
+	--green-dim: rgba(74, 222, 128, 0.1);
+	--amber: #fbbf24;
+	--amber-dim: rgba(251, 191, 36, 0.1);
+	--red: #f87171;
+	--red-dim: rgba(248, 113, 113, 0.12);
+	--purple: #c084fc;
+	--purple-dim: rgba(192, 132, 252, 0.1);
+}
+
+/* ── Semantic Color Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--success: #16a34a;
+	--success-dim: rgba(22, 163, 74, 0.1);
+	--warning: #d97706;
+	--warning-dim: rgba(217, 119, 6, 0.1);
+	--error: #dc2626;
+	--error-dim: rgba(220, 38, 38, 0.1);
+	--info: #0891b2;
+	--info-dim: rgba(8, 145, 178, 0.1);
+
+	--cyan: #0891b2;
+	--cyan-dim: rgba(8, 145, 178, 0.1);
+	--green: #16a34a;
+	--green-dim: rgba(22, 163, 74, 0.1);
+	--amber: #d97706;
+	--amber-dim: rgba(217, 119, 6, 0.1);
+	--red: #dc2626;
+	--red-dim: rgba(220, 38, 38, 0.1);
+	--purple: #7c3aed;
+	--purple-dim: rgba(124, 58, 237, 0.1);
+}
+
+/* ── Midnight Light — OS preference (unless manually dark) ── */
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme=&quot;dark&quot;]) {
+		--bg: #faf8f2;
+		--surface: #ffffff;
+		--surface2: #f5f0e6;
+		--surface-elevated: #fffdf5;
+		--border: rgba(30, 30, 50, 0.08);
+		--border-bright: rgba(30, 30, 50, 0.16);
+
+		--text: #1a1814;
+		--text-dim: #7a7468;
+		--text-muted: #9a9484;
+
+		--accent: #b8860b;
+		--accent-dim: rgba(184, 134, 11, 0.08);
+		--accent-glow: rgba(184, 134, 11, 0.2);
+
+		--code-bg: #2a2520;
+		--code-text: #e8e4d8;
+
+		--success: #16a34a;
+		--success-dim: rgba(22, 163, 74, 0.1);
+		--warning: #d97706;
+		--warning-dim: rgba(217, 119, 6, 0.1);
+		--error: #dc2626;
+		--error-dim: rgba(220, 38, 38, 0.1);
+		--info: #0891b2;
+		--info-dim: rgba(8, 145, 178, 0.1);
+
+		--cyan: #0891b2;
+		--cyan-dim: rgba(8, 145, 178, 0.1);
+		--green: #16a34a;
+		--green-dim: rgba(22, 163, 74, 0.1);
+		--amber: #d97706;
+		--amber-dim: rgba(217, 119, 6, 0.1);
+		--red: #dc2626;
+		--red-dim: rgba(220, 38, 38, 0.1);
+		--purple: #7c3aed;
+		--purple-dim: rgba(124, 58, 237, 0.1);
+	}
+}
+
+/* ── Typography Overrides ── */
+body {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+h1, h2, h3, h4 {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+code, pre, .mono {
+	font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Slide mode — midnight-editorial aesthetic (used by forge-slides)
+   Cinematic serif display, radial gold glow, decorative corners.
+   ══════════════════════════════════════════════════════════════════ */
+
+.deck .slide--title {
+	background-image:
+		radial-gradient(ellipse at 50% 20%, var(--accent-glow) 0%, transparent 55%),
+		linear-gradient(to bottom, var(--bg), var(--surface));
+}
+.deck .slide--title .slide__display {
+	font-family: 'Instrument Serif', Georgia, serif;
+	font-weight: 400;
+	letter-spacing: -2px;
+	color: var(--text);
+}
+.deck .slide--title .slide__subtitle {
+	color: var(--text-dim);
+	border-top: 1px solid var(--border-bright);
+	padding-top: 1rem;
+}
+.deck .slide--content .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--text);
+	letter-spacing: -1px;
+}
+.deck .slide--content .slide__label {
+	color: var(--accent);
+}
+.deck .slide--section .slide__number {
+	color: var(--accent);
+	opacity: 0.06;
+}
+.deck .slide--closing {
+	background-image:
+		radial-gradient(ellipse at 50% 70%, var(--accent-dim) 0%, transparent 60%),
+		linear-gradient(to top, var(--bg), var(--surface));
+}
+.deck .slide--closing .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--accent);
+}
+.deck .slide--closing .cta {
+	box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 32px 24px 40px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  header { margin-bottom: 20px; }
+  .header-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  h1 { font-size: 28px; font-weight: 700; margin: 6px 0 4px; font-family: 'Outfit', sans-serif; }
+  h1 .accent { color: var(--cyan); }
+  .header-subtitle { color: var(--text-dim); font-size: 13px; margin: 0; max-width: 740px; }
+
+  .fgraph-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
+  .fgraph-edges .fg-edge { fill: none; stroke-width: 1.6; opacity: 0.95; vector-effect: non-scaling-stroke; }
+  .fgraph-edges .fg-edge.amber  { stroke: var(--amber); }
+  .fgraph-edges .fg-edge.cyan   { stroke: var(--cyan); }
+  .fgraph-edges .fg-edge.purple { stroke: var(--purple); }
+  .fgraph-edges .fg-edge.green  { stroke: var(--green); }
+  .fgraph-edges .fg-edge.red    { stroke: var(--red); }
+  .fgraph-edges .fg-edge.dashed { stroke-dasharray: 4 3; }
+  .fgraph-edges .fg-edge.thick  { stroke-width: 2.6; }
+  .fgraph-edges .mk-amber  { fill: var(--amber); }
+  .fgraph-edges .mk-cyan   { fill: var(--cyan); }
+  .fgraph-edges .mk-purple { fill: var(--purple); }
+  .fgraph-edges .mk-green  { fill: var(--green); }
+  .fgraph-edges .mk-red    { fill: var(--red); }
+
+  .fgraph-lbl {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    transform: translate(-50%, -50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    background: var(--bg-panel);
+    border-radius: 3px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 3;
+  }
+  .fgraph-lbl.amber  { color: var(--amber); }
+  .fgraph-lbl.cyan   { color: var(--cyan); }
+  .fgraph-lbl.purple { color: var(--purple); }
+  .fgraph-lbl.green  { color: var(--green); }
+  .fgraph-lbl.red    { color: var(--red); }
+  .fgraph-lbl .dim   { color: var(--text-muted); font-weight: 400; }
+
+  .fgraph-legend {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .fgraph-wrap.sys {
+    position: relative;
+    width: 100%;
+    max-width: 960px;
+    aspect-ratio: 16 / 10;
+    margin: 24px auto 16px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(34,211,238,0.35);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .sys-zone-frame {
+    position: absolute;
+    left: 2%;
+    width: 96%;
+    border: 1px dashed var(--border-bright);
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0.35;
+    z-index: 0;
+  }
+  .sys-zone-lbl {
+    position: absolute;
+    left: 4%;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--bg-panel);
+    padding: 0 6px;
+    z-index: 1;
+  }
+
+  .fgraph-node.sys-node {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    width: var(--w, 14%);
+    transform: translate(-50%, -50%);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-bright);
+    border-radius: 12px;
+    padding: 6px 8px 7px;
+    text-align: center;
+    z-index: 2;
+  }
+  .fgraph-node.sys-node.narrow { --w: 10%; }
+  .fgraph-node.sys-node.amber  { border-color: var(--amber);  background: rgba(251,191,36,0.10); }
+  .fgraph-node.sys-node.cyan   { border-color: var(--cyan);   background: rgba(34,211,238,0.10); }
+  .fgraph-node.sys-node.purple { border-color: var(--purple); background: rgba(167,139,250,0.10); }
+  .fgraph-node.sys-node.green  { border-color: var(--green);  background: rgba(52,211,153,0.10); }
+  .fgraph-node.sys-node.red    { border-color: var(--red);    background: rgba(251,113,133,0.10); }
+
+  .fgraph-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .fgraph-title.amber  { color: var(--amber); }
+  .fgraph-title.cyan   { color: var(--cyan); }
+  .fgraph-title.purple { color: var(--purple); }
+  .fgraph-title.green  { color: var(--green); }
+  .fgraph-title.red    { color: var(--red); }
+
+  .fgraph-sub {
+    margin-top: 3px;
+    font-family: 'Space Mono', monospace;
+    font-size: 8.5px;
+    line-height: 1.3;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class=&quot;header-eyebrow&quot;>Lumen · System architecture</div>
+  <h1>System context</h1>
+  <p class=&quot;header-subtitle&quot;>Two planes over two shared stores</p>
+</header>
+
+<main>
+<div class=&quot;fgraph-wrap sys&quot; role=&quot;img&quot; aria-label=&quot;System architecture: System context. Browser, Control plane · Next.js + Better Auth, Data plane, Shared stores.&quot;>
+
+  <!-- ── ZONE FRAMES + LABELS ───────────────────── -->
+  <div class=&quot;sys-zone-frame&quot; style=&quot;top: 1.3%; height: 21.3%;&quot;></div>
+  <div class=&quot;sys-zone-lbl&quot; style=&quot;top: -0.7%;&quot;>Browser</div>
+  <div class=&quot;sys-zone-frame&quot; style=&quot;top: 26.7%; height: 21.3%;&quot;></div>
+  <div class=&quot;sys-zone-lbl&quot; style=&quot;top: 24.7%;&quot;>Control plane · Next.js + Better Auth</div>
+  <div class=&quot;sys-zone-frame&quot; style=&quot;top: 52.0%; height: 21.3%;&quot;></div>
+  <div class=&quot;sys-zone-lbl&quot; style=&quot;top: 50.0%;&quot;>Data plane</div>
+  <div class=&quot;sys-zone-frame&quot; style=&quot;top: 77.3%; height: 21.3%;&quot;></div>
+  <div class=&quot;sys-zone-lbl&quot; style=&quot;top: 75.3%;&quot;>Shared stores</div>
+
+  <!-- ── EDGES ───────────────────────────────────── -->
+  <svg class=&quot;fgraph-edges&quot; viewBox=&quot;0 0 100 100&quot; preserveAspectRatio=&quot;none&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;>
+
+    <defs>
+      <marker id=&quot;fg-arr-amber&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+      <marker id=&quot;fg-arr-amber-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan-bi&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple-bi&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red-bi&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+    </defs>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 50.0,12.0 L 21.2,37.3&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;fgraph-lbl cyan&quot; style=&quot;--x:35.6; --y:24.7;&quot;>poll /api/usage</div>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 21.2,37.3 L 40.4,37.3&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 21.2,37.3 L 34.0,88.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;fgraph-lbl cyan&quot; style=&quot;--x:27.6; --y:62.7;&quot;>read count</div>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 40.4,37.3 L 59.6,37.3&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 40.4,37.3 L 66.0,88.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;fgraph-lbl cyan&quot; style=&quot;--x:53.2; --y:62.7;&quot;>org · key · plan</div>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 78.8,37.3 L 66.0,88.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 59.6,37.3 L 26.0,62.7&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;fgraph-lbl cyan&quot; style=&quot;--x:42.8; --y:50.0;&quot;>admin: /user/new · /key/generate</div>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 50.0,12.0 L 26.0,62.7&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;fgraph-lbl cyan&quot; style=&quot;--x:38.0; --y:37.3;&quot;>inference: user key</div>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 26.0,62.7 L 50.0,62.7&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 50.0,62.7 L 34.0,88.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;fgraph-lbl cyan&quot; style=&quot;--x:42.0; --y:75.3;&quot;>INCR / DECR</div>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 26.0,62.7 L 74.0,62.7&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;fgraph-lbl cyan&quot; style=&quot;--x:50.0; --y:62.7;&quot;>forward</div>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 26.0,62.7 L 66.0,88.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  </svg>
+
+  <!-- ── NODES ──────────────────────────────────── -->
+  <div class=&quot;fgraph-node sys-node cyan&quot; style=&quot;--x:50.0; --y:12.0;&quot;>
+    <div class=&quot;fgraph-title cyan&quot;>Dashboard UI</div>
+    <div class=&quot;fgraph-sub&quot;>usage ring · key manager</div>
+  </div>
+  <div class=&quot;fgraph-node sys-node purple&quot; style=&quot;--x:21.2; --y:37.3;&quot;>
+    <div class=&quot;fgraph-title purple&quot;>API routes</div>
+    <div class=&quot;fgraph-sub&quot;>/api/usage · /api/keys/*</div>
+  </div>
+  <div class=&quot;fgraph-node sys-node purple&quot; style=&quot;--x:40.4; --y:37.3;&quot;>
+    <div class=&quot;fgraph-title purple&quot;>ensureProvisioned()</div>
+    <div class=&quot;fgraph-sub&quot;>idempotent</div>
+  </div>
+  <div class=&quot;fgraph-node sys-node purple&quot; style=&quot;--x:59.6; --y:37.3;&quot;>
+    <div class=&quot;fgraph-title purple&quot;>litellm.ts</div>
+    <div class=&quot;fgraph-sub&quot;>master-key admin client</div>
+  </div>
+  <div class=&quot;fgraph-node sys-node purple&quot; style=&quot;--x:78.8; --y:37.3;&quot;>
+    <div class=&quot;fgraph-title purple&quot;>Better Auth</div>
+    <div class=&quot;fgraph-sub&quot;>Google OAuth</div>
+  </div>
+  <div class=&quot;fgraph-node sys-node amber&quot; style=&quot;--x:26.0; --y:62.7;&quot;>
+    <div class=&quot;fgraph-title amber&quot;>LiteLLM proxy</div>
+    <div class=&quot;fgraph-sub&quot;>:4000</div>
+  </div>
+  <div class=&quot;fgraph-node sys-node amber&quot; style=&quot;--x:50.0; --y:62.7;&quot;>
+    <div class=&quot;fgraph-title amber&quot;>flat_cost.py</div>
+    <div class=&quot;fgraph-sub&quot;>quota callback</div>
+  </div>
+  <div class=&quot;fgraph-node sys-node amber&quot; style=&quot;--x:74.0; --y:62.7;&quot;>
+    <div class=&quot;fgraph-title amber&quot;>devserver</div>
+    <div class=&quot;fgraph-sub&quot;>qwen3.5-4b</div>
+  </div>
+  <div class=&quot;fgraph-node sys-node red&quot; style=&quot;--x:34.0; --y:88.0;&quot;>
+    <div class=&quot;fgraph-title red&quot;>Redis</div>
+    <div class=&quot;fgraph-sub&quot;>reqcount:{user}:{day}</div>
+  </div>
+  <div class=&quot;fgraph-node sys-node green&quot; style=&quot;--x:66.0; --y:88.0;&quot;>
+    <div class=&quot;fgraph-title green&quot;>Postgres</div>
+    <div class=&quot;fgraph-sub&quot;>LiteLLM DB + app DB</div>
+  </div>
+  <div class=&quot;fgraph-legend&quot;>Solid = master-key admin path · dashed = customer inference path</div>
+</div>
+</main>
+
+</body>
+</html>"></iframe>
+
+  <h2>Subsystems</h2>
+  <div class="idx">
+    <a href="#c-control"><div class="t"><span class="dot" style="background:var(--purple)"></span>Control plane</div><div class="d">Next.js + Better Auth — auth, provisioning, dashboard</div></a>
+    <a href="#c-data"><div class="t"><span class="dot" style="background:var(--amber)"></span>Data plane</div><div class="d">LiteLLM proxy — routing, key auth, quota callback</div></a>
+    <a href="#c-quota"><div class="t"><span class="dot" style="background:var(--red)"></span>Quota enforcement</div><div class="d">Atomic Redis daily counter</div></a>
+    <a href="#c-persist"><div class="t"><span class="dot" style="background:var(--green)"></span>Persistence</div><div class="d">Postgres — LiteLLM DB + app DB</div></a>
+  </div>
+
+  <h2>External dependencies</h2>
+  <p><span class="tag">devserver:8001 · qwen3.5-4b</span><span class="tag">Google OAuth</span><span class="tag">Redis 7</span><span class="tag">Postgres 16</span><span class="tag">ghcr.io/berriai/litellm:main-stable</span></p>
+</section>
+
+<!-- COMPONENTS -->
+<section class="panel" data-panel="components" role="tabpanel">
+  <div class="hero"><div class="eyebrow">Components</div><h1>Four subsystems</h1><p class="lede">Each boundary already has a name in the code — the two Next.js planes, the LiteLLM data plane, the Redis counter, and Postgres.</p></div>
+
+  <div class="card accent" id="c-control">
+    <h3><span class="dot" style="background:var(--purple)"></span>1 · Control plane (Next.js + Better Auth)</h3>
+    <p>Better Auth handles Google OAuth and writes the standard auth tables via a Drizzle adapter. Org creation is disabled client-side — orgs are created server-side during provisioning instead. The control plane is the only caller that holds the LiteLLM master key.</p>
+    <p class="sub">Key modules:</p>
+    <p><span class="tag">src/auth.ts</span><span class="tag">lib/session.ts</span><span class="tag">lib/provisioning.ts</span><span class="tag">lib/litellm.ts</span><span class="tag">lib/org.ts</span><span class="tag">lib/crypto.ts</span><span class="tag">app/api/*</span></p>
+  </div>
+
+  <div class="card accent" id="c-data">
+    <h3><span class="dot" style="background:var(--amber)"></span>2 · Data plane (LiteLLM proxy)</h3>
+    <p>Pinned <code>ghcr.io/berriai/litellm:main-stable</code>. Exposes one customer-facing model <code>qwen-4b</code>, mapped to upstream <code>openai/qwen3.5-4b</code> on <code>devserver:8001</code> (llama-swap behind nginx). LiteLLM enforces per-key model access and records spend/requests into its own Postgres tables. Quota enforcement is delegated to the callback, registered as <code>callbacks: [callbacks.flat_cost.proxy_handler_instance]</code>.</p>
+  </div>
+
+  <div class="card accent" id="c-quota">
+    <h3><span class="dot" style="background:var(--red)"></span>3 · Quota enforcement (Redis atomic counter)</h3>
+    <p>The core reliability decision. <code>flat_cost.py</code> runs on every proxy request and counts against <code>reqcount:{user_id}:{YYYYMMDD}</code> (UTC) using atomic <code>INCR</code> — exact and lag-free even under bursts, unlike LiteLLM's batch-flushed daily table (~10s lag) which leaks past the cap under load.</p>
+    <ul>
+      <li>First increment of the day sets <code>EXPIREAT</code> next UTC midnight → auto-reset.</li>
+      <li>Over-cap request is <code>DECR</code>'d back and rejected with <b>429</b> (<code>BudgetExceededError</code>).</li>
+      <li>Genuine upstream failure refunds the slot; our own cap rejection is excluded.</li>
+      <li>Redis unreachable → fail open (never block traffic on an infra hiccup).</li>
+    </ul>
+    <p class="why"><b>Reset is a date rollover, not a timer</b> — nothing runs at midnight. A new UTC day reads a fresh key that starts at 0; the old key expires on its own TTL.</p>
+  </div>
+
+  <div class="card accent" id="c-persist">
+    <h3><span class="dot" style="background:var(--green)"></span>4 · Persistence (Postgres)</h3>
+    <p>One Postgres instance, two databases: <b>litellm</b> (LiteLLM's managed keys/spend/daily tables) and <b>app</b> (application tables via Drizzle). Raw API keys are never stored — only an AES-256-GCM <code>encrypted_key</code> for reveal and a <code>masked_key</code> for display. <code>litellm_user_id</code> equals the Better Auth user id, so one id threads session → plan → key → quota counter.</p>
+    <iframe class="diagram" loading="lazy" height="520" srcdoc="<!DOCTYPE html>
+<html lang=&quot;en&quot; data-theme=&quot;dark&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;>
+<meta name=&quot;generator&quot; content=&quot;lumen / fgraph deterministic renderer&quot;>
+<title>App data model</title>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+<link href=&quot;https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=Outfit:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   midnight-editorial.css — deep navy, serif display, warm gold accents.
+   Cinematic, premium magazine feel. Dark-first.
+
+   Identity: editorial decks, narrative presentations, premium reports.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ──
+   Add to <head>:
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+   <link href=&quot;https://fonts.googleapis.com/css2?family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+*/
+
+/* ── Baseline Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	color-scheme: light dark;
+
+	/* Surfaces */
+	--bg: #0f1729;
+	--surface: #162040;
+	--surface2: #1d2b52;
+	--surface-elevated: #243362;
+	--border: rgba(200, 180, 140, 0.08);
+	--border-bright: rgba(200, 180, 140, 0.16);
+
+	/* Text */
+	--text: #e8e4d8;
+	--text-dim: #9a9484;
+	--text-muted: #7a7468;
+
+	/* Accent — warm gold */
+	--accent: #d4a73a;
+	--accent-dim: rgba(212, 167, 58, 0.1);
+	--accent-glow: rgba(212, 167, 58, 0.25);
+
+	/* Code */
+	--code-bg: #0a0f1e;
+	--code-text: #d4d0c4;
+}
+
+/* ── Baseline Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--bg: #faf8f2;
+	--surface: #ffffff;
+	--surface2: #f5f0e6;
+	--surface-elevated: #fffdf5;
+	--border: rgba(30, 30, 50, 0.08);
+	--border-bright: rgba(30, 30, 50, 0.16);
+
+	--text: #1a1814;
+	--text-dim: #7a7468;
+	--text-muted: #9a9484;
+
+	--accent: #b8860b;
+	--accent-dim: rgba(184, 134, 11, 0.08);
+	--accent-glow: rgba(184, 134, 11, 0.2);
+
+	--code-bg: #2a2520;
+	--code-text: #e8e4d8;
+}
+
+/* ── Semantic Color Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	--success: #4ade80;
+	--success-dim: rgba(74, 222, 128, 0.1);
+	--warning: #fbbf24;
+	--warning-dim: rgba(251, 191, 36, 0.1);
+	--error: #f87171;
+	--error-dim: rgba(248, 113, 113, 0.12);
+	--info: #22d3ee;
+	--info-dim: rgba(34, 211, 238, 0.12);
+
+	/* Extended palette */
+	--cyan: #22d3ee;
+	--cyan-dim: rgba(34, 211, 238, 0.12);
+	--green: #4ade80;
+	--green-dim: rgba(74, 222, 128, 0.1);
+	--amber: #fbbf24;
+	--amber-dim: rgba(251, 191, 36, 0.1);
+	--red: #f87171;
+	--red-dim: rgba(248, 113, 113, 0.12);
+	--purple: #c084fc;
+	--purple-dim: rgba(192, 132, 252, 0.1);
+}
+
+/* ── Semantic Color Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--success: #16a34a;
+	--success-dim: rgba(22, 163, 74, 0.1);
+	--warning: #d97706;
+	--warning-dim: rgba(217, 119, 6, 0.1);
+	--error: #dc2626;
+	--error-dim: rgba(220, 38, 38, 0.1);
+	--info: #0891b2;
+	--info-dim: rgba(8, 145, 178, 0.1);
+
+	--cyan: #0891b2;
+	--cyan-dim: rgba(8, 145, 178, 0.1);
+	--green: #16a34a;
+	--green-dim: rgba(22, 163, 74, 0.1);
+	--amber: #d97706;
+	--amber-dim: rgba(217, 119, 6, 0.1);
+	--red: #dc2626;
+	--red-dim: rgba(220, 38, 38, 0.1);
+	--purple: #7c3aed;
+	--purple-dim: rgba(124, 58, 237, 0.1);
+}
+
+/* ── Midnight Light — OS preference (unless manually dark) ── */
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme=&quot;dark&quot;]) {
+		--bg: #faf8f2;
+		--surface: #ffffff;
+		--surface2: #f5f0e6;
+		--surface-elevated: #fffdf5;
+		--border: rgba(30, 30, 50, 0.08);
+		--border-bright: rgba(30, 30, 50, 0.16);
+
+		--text: #1a1814;
+		--text-dim: #7a7468;
+		--text-muted: #9a9484;
+
+		--accent: #b8860b;
+		--accent-dim: rgba(184, 134, 11, 0.08);
+		--accent-glow: rgba(184, 134, 11, 0.2);
+
+		--code-bg: #2a2520;
+		--code-text: #e8e4d8;
+
+		--success: #16a34a;
+		--success-dim: rgba(22, 163, 74, 0.1);
+		--warning: #d97706;
+		--warning-dim: rgba(217, 119, 6, 0.1);
+		--error: #dc2626;
+		--error-dim: rgba(220, 38, 38, 0.1);
+		--info: #0891b2;
+		--info-dim: rgba(8, 145, 178, 0.1);
+
+		--cyan: #0891b2;
+		--cyan-dim: rgba(8, 145, 178, 0.1);
+		--green: #16a34a;
+		--green-dim: rgba(22, 163, 74, 0.1);
+		--amber: #d97706;
+		--amber-dim: rgba(217, 119, 6, 0.1);
+		--red: #dc2626;
+		--red-dim: rgba(220, 38, 38, 0.1);
+		--purple: #7c3aed;
+		--purple-dim: rgba(124, 58, 237, 0.1);
+	}
+}
+
+/* ── Typography Overrides ── */
+body {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+h1, h2, h3, h4 {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+code, pre, .mono {
+	font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Slide mode — midnight-editorial aesthetic (used by forge-slides)
+   Cinematic serif display, radial gold glow, decorative corners.
+   ══════════════════════════════════════════════════════════════════ */
+
+.deck .slide--title {
+	background-image:
+		radial-gradient(ellipse at 50% 20%, var(--accent-glow) 0%, transparent 55%),
+		linear-gradient(to bottom, var(--bg), var(--surface));
+}
+.deck .slide--title .slide__display {
+	font-family: 'Instrument Serif', Georgia, serif;
+	font-weight: 400;
+	letter-spacing: -2px;
+	color: var(--text);
+}
+.deck .slide--title .slide__subtitle {
+	color: var(--text-dim);
+	border-top: 1px solid var(--border-bright);
+	padding-top: 1rem;
+}
+.deck .slide--content .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--text);
+	letter-spacing: -1px;
+}
+.deck .slide--content .slide__label {
+	color: var(--accent);
+}
+.deck .slide--section .slide__number {
+	color: var(--accent);
+	opacity: 0.06;
+}
+.deck .slide--closing {
+	background-image:
+		radial-gradient(ellipse at 50% 70%, var(--accent-dim) 0%, transparent 60%),
+		linear-gradient(to top, var(--bg), var(--surface));
+}
+.deck .slide--closing .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--accent);
+}
+.deck .slide--closing .cta {
+	box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 32px 24px 40px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  header { margin-bottom: 20px; }
+  .header-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  h1 { font-size: 28px; font-weight: 700; margin: 6px 0 4px; font-family: 'Outfit', sans-serif; }
+  h1 .accent { color: var(--cyan); }
+  .header-subtitle { color: var(--text-dim); font-size: 13px; margin: 0; max-width: 740px; }
+
+  .fgraph-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
+  .fgraph-edges .fg-edge { fill: none; stroke-width: 1.6; opacity: 0.95; vector-effect: non-scaling-stroke; }
+  .fgraph-edges .fg-edge.amber  { stroke: var(--amber); }
+  .fgraph-edges .fg-edge.cyan   { stroke: var(--cyan); }
+  .fgraph-edges .fg-edge.purple { stroke: var(--purple); }
+  .fgraph-edges .fg-edge.green  { stroke: var(--green); }
+  .fgraph-edges .fg-edge.red    { stroke: var(--red); }
+  .fgraph-edges .fg-edge.dashed { stroke-dasharray: 4 3; }
+  .fgraph-edges .fg-edge.thick  { stroke-width: 2.6; }
+  .fgraph-edges .mk-amber  { fill: var(--amber); }
+  .fgraph-edges .mk-cyan   { fill: var(--cyan); }
+  .fgraph-edges .mk-purple { fill: var(--purple); }
+  .fgraph-edges .mk-green  { fill: var(--green); }
+  .fgraph-edges .mk-red    { fill: var(--red); }
+
+  .fgraph-lbl {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    transform: translate(-50%, -50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    background: var(--bg-panel);
+    border-radius: 3px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 3;
+  }
+  .fgraph-lbl.amber  { color: var(--amber); }
+  .fgraph-lbl.cyan   { color: var(--cyan); }
+  .fgraph-lbl.purple { color: var(--purple); }
+  .fgraph-lbl.green  { color: var(--green); }
+  .fgraph-lbl.red    { color: var(--red); }
+  .fgraph-lbl .dim   { color: var(--text-muted); font-weight: 400; }
+
+  .fgraph-legend {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .fgraph-wrap.er {
+    position: relative;
+    width: 100%;
+    max-width: 860px;
+    aspect-ratio: 4 / 3;
+    margin: 24px auto 16px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(34,211,238,0.35);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .er-entity {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    width: var(--w, 22%);
+    transform: translate(-50%, -50%);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-bright);
+    border-radius: 10px;
+    padding: 8px 10px;
+    text-align: left;
+    z-index: 2;
+  }
+  .er-entity.amber  { border-color: var(--amber); }
+  .er-entity.cyan   { border-color: var(--cyan); }
+  .er-entity.purple { border-color: var(--purple); }
+  .er-entity.green  { border-color: var(--green); }
+  .er-entity.red    { border-color: var(--red); }
+
+  .er-entity-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border-bright);
+  }
+  .er-entity-name.amber  { color: var(--amber); }
+  .er-entity-name.cyan   { color: var(--cyan); }
+  .er-entity-name.purple { color: var(--purple); }
+  .er-entity-name.green  { color: var(--green); }
+  .er-entity-name.red    { color: var(--red); }
+
+  .er-attr {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    line-height: 1.4;
+    color: var(--text-dim);
+  }
+  .er-attr.key {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .er-rel-label {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    transform: translate(-50%, -50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    background: var(--bg-panel);
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    z-index: 3;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class=&quot;header-eyebrow&quot;>Lumen · Entity relationship</div>
+  <h1>App data model</h1>
+  <p class=&quot;header-subtitle&quot;>App-owned tables (Drizzle)</p>
+</header>
+
+<main>
+<div class=&quot;fgraph-wrap er&quot; role=&quot;img&quot; aria-label=&quot;ER diagram: App data model. organization_plan, api_keys, plan_limits, organization.&quot;>
+
+  <!-- ── ENTITIES ───────────────────────────────── -->
+  <div class=&quot;er-entity uuid&quot; style=&quot;--x:20.0; --y:30.0;&quot;>
+    <div class=&quot;er-entity-name uuid&quot;>organization_plan</div>
+    <div class=&quot;er-attr key&quot;>org_id <span class=&quot;dim&quot;>(uuid)</span></div>
+    <div class=&quot;er-attr&quot;>litellm_user_id <span class=&quot;dim&quot;>(string)</span></div>
+    <div class=&quot;er-attr&quot;>plan <span class=&quot;dim&quot;>(string)</span></div>
+    <div class=&quot;er-attr&quot;>access_expires_at <span class=&quot;dim&quot;>(timestamp)</span></div>
+    <div class=&quot;er-attr&quot;>provisioned <span class=&quot;dim&quot;>(boolean)</span></div>
+  </div>
+  <div class=&quot;er-entity uuid&quot; style=&quot;--x:50.0; --y:30.0;&quot;>
+    <div class=&quot;er-entity-name uuid&quot;>api_keys</div>
+    <div class=&quot;er-attr key&quot;>id <span class=&quot;dim&quot;>(uuid)</span></div>
+    <div class=&quot;er-attr&quot;>org_id <span class=&quot;dim&quot;>(uuid)</span></div>
+    <div class=&quot;er-attr&quot;>litellm_key_alias <span class=&quot;dim&quot;>(string)</span></div>
+    <div class=&quot;er-attr&quot;>masked_key <span class=&quot;dim&quot;>(string)</span></div>
+    <div class=&quot;er-attr&quot;>encrypted_key <span class=&quot;dim&quot;>(string)</span></div>
+    <div class=&quot;er-attr&quot;>is_default <span class=&quot;dim&quot;>(boolean)</span></div>
+  </div>
+  <div class=&quot;er-entity string&quot; style=&quot;--x:80.0; --y:30.0;&quot;>
+    <div class=&quot;er-entity-name string&quot;>plan_limits</div>
+    <div class=&quot;er-attr key&quot;>plan <span class=&quot;dim&quot;>(string)</span></div>
+    <div class=&quot;er-attr&quot;>daily_request_cap <span class=&quot;dim&quot;>(int)</span></div>
+  </div>
+  <div class=&quot;er-entity uuid&quot; style=&quot;--x:35.0; --y:70.0;&quot;>
+    <div class=&quot;er-entity-name uuid&quot;>organization</div>
+    <div class=&quot;er-attr key&quot;>id <span class=&quot;dim&quot;>(uuid)</span></div>
+    <div class=&quot;er-attr&quot;>name <span class=&quot;dim&quot;>(string)</span></div>
+    <div class=&quot;er-attr&quot;>slug <span class=&quot;dim&quot;>(string)</span></div>
+  </div>
+
+  <!-- ── RELATIONSHIPS ──────────────────────────── -->
+  <svg class=&quot;fgraph-edges&quot; viewBox=&quot;0 0 100 100&quot; preserveAspectRatio=&quot;none&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;>
+
+    <defs>
+      <marker id=&quot;fg-arr-amber&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+      <marker id=&quot;fg-arr-amber-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan-bi&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple-bi&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red-bi&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+    </defs>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 35.0,70.0 L 20.0,30.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;er-rel-label&quot; style=&quot;--x:27.5; --y:50.0;&quot;>has plan</div>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 35.0,70.0 L 50.0,30.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;er-rel-label&quot; style=&quot;--x:42.5; --y:50.0;&quot;>owns keys</div>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 80.0,30.0 L 20.0,30.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+  <div class=&quot;er-rel-label&quot; style=&quot;--x:50.0; --y:30.0;&quot;>caps by plan name</div>
+  </svg>
+
+  <div class=&quot;fgraph-legend&quot;>Raw keys never stored — only AES-256-GCM encrypted + masked</div>
+</div>
+</main>
+
+</body>
+</html>"></iframe>
+  </div>
+</section>
+
+<!-- FLOWS -->
+<section class="panel" data-panel="flows" role="tabpanel">
+  <div class="hero"><div class="eyebrow">Flows</div><h1>Three cross-subsystem paths</h1><p class="lede">Provisioning on first load, inference under the quota, and the dashboard usage read.</p></div>
+
+  <h2>Provisioning (first authenticated load)</h2>
+  <p><code>ensureProvisioned()</code> runs from the dashboard layout on every load. It short-circuits if already provisioned and retries cleanly if a prior attempt half-failed — each step is idempotent.</p>
+  <iframe class="diagram" loading="lazy" height="560" srcdoc="<!DOCTYPE html>
+<html lang=&quot;en&quot; data-theme=&quot;dark&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;>
+<meta name=&quot;generator&quot; content=&quot;lumen / fgraph deterministic renderer&quot;>
+<title>Provisioning</title>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+<link href=&quot;https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=Outfit:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   midnight-editorial.css — deep navy, serif display, warm gold accents.
+   Cinematic, premium magazine feel. Dark-first.
+
+   Identity: editorial decks, narrative presentations, premium reports.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ──
+   Add to <head>:
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+   <link href=&quot;https://fonts.googleapis.com/css2?family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+*/
+
+/* ── Baseline Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	color-scheme: light dark;
+
+	/* Surfaces */
+	--bg: #0f1729;
+	--surface: #162040;
+	--surface2: #1d2b52;
+	--surface-elevated: #243362;
+	--border: rgba(200, 180, 140, 0.08);
+	--border-bright: rgba(200, 180, 140, 0.16);
+
+	/* Text */
+	--text: #e8e4d8;
+	--text-dim: #9a9484;
+	--text-muted: #7a7468;
+
+	/* Accent — warm gold */
+	--accent: #d4a73a;
+	--accent-dim: rgba(212, 167, 58, 0.1);
+	--accent-glow: rgba(212, 167, 58, 0.25);
+
+	/* Code */
+	--code-bg: #0a0f1e;
+	--code-text: #d4d0c4;
+}
+
+/* ── Baseline Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--bg: #faf8f2;
+	--surface: #ffffff;
+	--surface2: #f5f0e6;
+	--surface-elevated: #fffdf5;
+	--border: rgba(30, 30, 50, 0.08);
+	--border-bright: rgba(30, 30, 50, 0.16);
+
+	--text: #1a1814;
+	--text-dim: #7a7468;
+	--text-muted: #9a9484;
+
+	--accent: #b8860b;
+	--accent-dim: rgba(184, 134, 11, 0.08);
+	--accent-glow: rgba(184, 134, 11, 0.2);
+
+	--code-bg: #2a2520;
+	--code-text: #e8e4d8;
+}
+
+/* ── Semantic Color Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	--success: #4ade80;
+	--success-dim: rgba(74, 222, 128, 0.1);
+	--warning: #fbbf24;
+	--warning-dim: rgba(251, 191, 36, 0.1);
+	--error: #f87171;
+	--error-dim: rgba(248, 113, 113, 0.12);
+	--info: #22d3ee;
+	--info-dim: rgba(34, 211, 238, 0.12);
+
+	/* Extended palette */
+	--cyan: #22d3ee;
+	--cyan-dim: rgba(34, 211, 238, 0.12);
+	--green: #4ade80;
+	--green-dim: rgba(74, 222, 128, 0.1);
+	--amber: #fbbf24;
+	--amber-dim: rgba(251, 191, 36, 0.1);
+	--red: #f87171;
+	--red-dim: rgba(248, 113, 113, 0.12);
+	--purple: #c084fc;
+	--purple-dim: rgba(192, 132, 252, 0.1);
+}
+
+/* ── Semantic Color Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--success: #16a34a;
+	--success-dim: rgba(22, 163, 74, 0.1);
+	--warning: #d97706;
+	--warning-dim: rgba(217, 119, 6, 0.1);
+	--error: #dc2626;
+	--error-dim: rgba(220, 38, 38, 0.1);
+	--info: #0891b2;
+	--info-dim: rgba(8, 145, 178, 0.1);
+
+	--cyan: #0891b2;
+	--cyan-dim: rgba(8, 145, 178, 0.1);
+	--green: #16a34a;
+	--green-dim: rgba(22, 163, 74, 0.1);
+	--amber: #d97706;
+	--amber-dim: rgba(217, 119, 6, 0.1);
+	--red: #dc2626;
+	--red-dim: rgba(220, 38, 38, 0.1);
+	--purple: #7c3aed;
+	--purple-dim: rgba(124, 58, 237, 0.1);
+}
+
+/* ── Midnight Light — OS preference (unless manually dark) ── */
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme=&quot;dark&quot;]) {
+		--bg: #faf8f2;
+		--surface: #ffffff;
+		--surface2: #f5f0e6;
+		--surface-elevated: #fffdf5;
+		--border: rgba(30, 30, 50, 0.08);
+		--border-bright: rgba(30, 30, 50, 0.16);
+
+		--text: #1a1814;
+		--text-dim: #7a7468;
+		--text-muted: #9a9484;
+
+		--accent: #b8860b;
+		--accent-dim: rgba(184, 134, 11, 0.08);
+		--accent-glow: rgba(184, 134, 11, 0.2);
+
+		--code-bg: #2a2520;
+		--code-text: #e8e4d8;
+
+		--success: #16a34a;
+		--success-dim: rgba(22, 163, 74, 0.1);
+		--warning: #d97706;
+		--warning-dim: rgba(217, 119, 6, 0.1);
+		--error: #dc2626;
+		--error-dim: rgba(220, 38, 38, 0.1);
+		--info: #0891b2;
+		--info-dim: rgba(8, 145, 178, 0.1);
+
+		--cyan: #0891b2;
+		--cyan-dim: rgba(8, 145, 178, 0.1);
+		--green: #16a34a;
+		--green-dim: rgba(22, 163, 74, 0.1);
+		--amber: #d97706;
+		--amber-dim: rgba(217, 119, 6, 0.1);
+		--red: #dc2626;
+		--red-dim: rgba(220, 38, 38, 0.1);
+		--purple: #7c3aed;
+		--purple-dim: rgba(124, 58, 237, 0.1);
+	}
+}
+
+/* ── Typography Overrides ── */
+body {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+h1, h2, h3, h4 {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+code, pre, .mono {
+	font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Slide mode — midnight-editorial aesthetic (used by forge-slides)
+   Cinematic serif display, radial gold glow, decorative corners.
+   ══════════════════════════════════════════════════════════════════ */
+
+.deck .slide--title {
+	background-image:
+		radial-gradient(ellipse at 50% 20%, var(--accent-glow) 0%, transparent 55%),
+		linear-gradient(to bottom, var(--bg), var(--surface));
+}
+.deck .slide--title .slide__display {
+	font-family: 'Instrument Serif', Georgia, serif;
+	font-weight: 400;
+	letter-spacing: -2px;
+	color: var(--text);
+}
+.deck .slide--title .slide__subtitle {
+	color: var(--text-dim);
+	border-top: 1px solid var(--border-bright);
+	padding-top: 1rem;
+}
+.deck .slide--content .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--text);
+	letter-spacing: -1px;
+}
+.deck .slide--content .slide__label {
+	color: var(--accent);
+}
+.deck .slide--section .slide__number {
+	color: var(--accent);
+	opacity: 0.06;
+}
+.deck .slide--closing {
+	background-image:
+		radial-gradient(ellipse at 50% 70%, var(--accent-dim) 0%, transparent 60%),
+		linear-gradient(to top, var(--bg), var(--surface));
+}
+.deck .slide--closing .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--accent);
+}
+.deck .slide--closing .cta {
+	box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 32px 24px 40px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  header { margin-bottom: 20px; }
+  .header-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  h1 { font-size: 28px; font-weight: 700; margin: 6px 0 4px; font-family: 'Outfit', sans-serif; }
+  h1 .accent { color: var(--cyan); }
+  .header-subtitle { color: var(--text-dim); font-size: 13px; margin: 0; max-width: 740px; }
+
+  .fgraph-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
+  .fgraph-edges .fg-edge { fill: none; stroke-width: 1.6; opacity: 0.95; vector-effect: non-scaling-stroke; }
+  .fgraph-edges .fg-edge.amber  { stroke: var(--amber); }
+  .fgraph-edges .fg-edge.cyan   { stroke: var(--cyan); }
+  .fgraph-edges .fg-edge.purple { stroke: var(--purple); }
+  .fgraph-edges .fg-edge.green  { stroke: var(--green); }
+  .fgraph-edges .fg-edge.red    { stroke: var(--red); }
+  .fgraph-edges .fg-edge.dashed { stroke-dasharray: 4 3; }
+  .fgraph-edges .fg-edge.thick  { stroke-width: 2.6; }
+  .fgraph-edges .mk-amber  { fill: var(--amber); }
+  .fgraph-edges .mk-cyan   { fill: var(--cyan); }
+  .fgraph-edges .mk-purple { fill: var(--purple); }
+  .fgraph-edges .mk-green  { fill: var(--green); }
+  .fgraph-edges .mk-red    { fill: var(--red); }
+
+  .fgraph-lbl {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    transform: translate(-50%, -50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    background: var(--bg-panel);
+    border-radius: 3px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 3;
+  }
+  .fgraph-lbl.amber  { color: var(--amber); }
+  .fgraph-lbl.cyan   { color: var(--cyan); }
+  .fgraph-lbl.purple { color: var(--purple); }
+  .fgraph-lbl.green  { color: var(--green); }
+  .fgraph-lbl.red    { color: var(--red); }
+  .fgraph-lbl .dim   { color: var(--text-muted); font-weight: 400; }
+
+  .fgraph-legend {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .fgraph-wrap.sequence {
+    position: relative;
+    width: 100%;
+    --msg-count: 5;
+    height: calc(140px + var(--msg-count) * 40px);
+    max-width: 860px;
+    margin: 24px auto 20px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(34,211,238,0.35);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .fg-seq-participant {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top: 6%;
+    transform: translate(-50%, 0);
+    padding: 6px 14px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-bright);
+    border-radius: 999px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text);
+    white-space: nowrap;
+    z-index: 2;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .fg-seq-participant .sub {
+    display: block;
+    font-size: 8.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .fg-seq-participant.amber  { border-color: rgba(251,191,36,0.55);  color: var(--amber); }
+  .fg-seq-participant.cyan   { border-color: rgba(34,211,238,0.55);  color: var(--cyan); }
+  .fg-seq-participant.purple { border-color: rgba(167,139,250,0.55); color: var(--purple); }
+  .fg-seq-participant.green  { border-color: rgba(52,211,153,0.55);  color: var(--green); }
+  .fg-seq-participant.red    { border-color: rgba(251,113,133,0.55); color: var(--red); }
+
+  .fg-lifeline {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top: 18%;
+    bottom: 8%;
+    width: 0;
+    border-left: 1px dashed var(--border-bright);
+    pointer-events: none;
+  }
+
+  .fg-seq-msg-lbl {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    transform: translate(-50%, -120%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-dim);
+    background: var(--bg-panel);
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class=&quot;header-eyebrow&quot;>Lumen · Sequence diagram</div>
+  <h1>Provisioning</h1>
+  <p class=&quot;header-subtitle&quot;>First authenticated load — idempotent</p>
+</header>
+
+<main>
+<div class=&quot;fgraph-wrap sequence&quot; style=&quot;--msg-count: 11;&quot; role=&quot;img&quot;
+     aria-label=&quot;Sequence diagram: Provisioning. User, layout.tsx, ensureProvisioned, Postgres, LiteLLM.&quot;>
+
+  <!-- ── PARTICIPANTS ───────────────────────────── -->
+  <div class=&quot;fg-seq-participant cyan&quot; style=&quot;--x:12.0&quot;>User</div>
+  <div class=&quot;fg-seq-participant purple&quot; style=&quot;--x:31.0&quot;>layout.tsx<span class=&quot;sub&quot;>dashboard</span></div>
+  <div class=&quot;fg-seq-participant purple&quot; style=&quot;--x:50.0&quot;>ensureProvisioned</div>
+  <div class=&quot;fg-seq-participant green&quot; style=&quot;--x:69.0&quot;>Postgres<span class=&quot;sub&quot;>app db</span></div>
+  <div class=&quot;fg-seq-participant amber&quot; style=&quot;--x:88.0&quot;>LiteLLM<span class=&quot;sub&quot;>master key</span></div>
+
+  <!-- ── LIFELINES ──────────────────────────────── -->
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:12.0&quot;></div>
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:31.0&quot;></div>
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:50.0&quot;></div>
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:69.0&quot;></div>
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:88.0&quot;></div>
+
+  <!-- ── MESSAGE ARROWS ─────────────────────────── -->
+  <svg class=&quot;fgraph-edges&quot; viewBox=&quot;0 0 100 100&quot; preserveAspectRatio=&quot;none&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;
+       style=&quot;position:absolute; inset:0; width:100%; height:100%;&quot;>
+
+    <defs>
+      <marker id=&quot;fg-arr-amber&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+      <marker id=&quot;fg-arr-amber-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan-bi&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple-bi&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red-bi&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+    </defs>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 12.0,24.0 L 31.0,24.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+    <path class=&quot;fg-edge purple&quot; d=&quot;M 31.0,30.2 L 50.0,30.2&quot; marker-end=&quot;url(#fg-arr-purple)&quot;/>
+    <path class=&quot;fg-edge purple&quot; d=&quot;M 50.0,36.4 L 69.0,36.4&quot; marker-end=&quot;url(#fg-arr-purple)&quot;/>
+    <path class=&quot;fg-edge green dashed&quot; d=&quot;M 69.0,42.6 L 50.0,42.6&quot; marker-end=&quot;url(#fg-arr-green)&quot;/>
+    <path class=&quot;fg-edge green&quot; d=&quot;M 50.0,48.8 L 69.0,48.8&quot; marker-end=&quot;url(#fg-arr-green)&quot;/>
+    <path class=&quot;fg-edge amber&quot; d=&quot;M 50.0,55.0 L 88.0,55.0&quot; marker-end=&quot;url(#fg-arr-amber)&quot;/>
+    <path class=&quot;fg-edge amber dashed&quot; d=&quot;M 88.0,61.2 L 50.0,61.2&quot; marker-end=&quot;url(#fg-arr-amber)&quot;/>
+    <path class=&quot;fg-edge amber&quot; d=&quot;M 50.0,67.4 L 88.0,67.4&quot; marker-end=&quot;url(#fg-arr-amber)&quot;/>
+    <path class=&quot;fg-edge amber dashed&quot; d=&quot;M 88.0,73.6 L 50.0,73.6&quot; marker-end=&quot;url(#fg-arr-amber)&quot;/>
+    <path class=&quot;fg-edge green&quot; d=&quot;M 50.0,79.8 L 69.0,79.8&quot; marker-end=&quot;url(#fg-arr-green)&quot;/>
+    <path class=&quot;fg-edge green&quot; d=&quot;M 50.0,86.0 L 69.0,86.0&quot; marker-end=&quot;url(#fg-arr-green)&quot;/>
+  </svg>
+
+  <!-- ── MESSAGE LABELS ─────────────────────────── -->
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:21.5; --y:24.0;&quot;>load /dashboard</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:40.5; --y:30.2;&quot;>ensureProvisioned(user)</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:36.4;&quot;>plan for litellm_user_id?</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:42.6;&quot;>provisioned? → short-circuit if true</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:48.8;&quot;>insert organization (if missing)</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:69.0; --y:55.0;&quot;>POST /user/new (budget, models)</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:69.0; --y:61.2;&quot;>&amp;quot;already exists&amp;quot; → treated as ok</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:69.0; --y:67.4;&quot;>POST /key/generate</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:69.0; --y:73.6;&quot;>raw key</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:79.8;&quot;>upsert api_keys (encrypted+masked)</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:86.0;&quot;>upsert organization_plan (provisioned=true)</div>
+
+  <div class=&quot;fgraph-legend&quot;>Every step idempotent — a half-failed attempt retries cleanly on next load</div>
+</div>
+</main>
+
+</body>
+</html>"></iframe>
+
+  <h2>Inference + quota enforcement</h2>
+  <p>The customer calls the proxy directly with their own key. The callback enforces the cap before the request reaches the model.</p>
+  <iframe class="diagram" loading="lazy" height="580" srcdoc="<!DOCTYPE html>
+<html lang=&quot;en&quot; data-theme=&quot;dark&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;>
+<meta name=&quot;generator&quot; content=&quot;lumen / fgraph deterministic renderer&quot;>
+<title>Inference + quota enforcement</title>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+<link href=&quot;https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=Outfit:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   midnight-editorial.css — deep navy, serif display, warm gold accents.
+   Cinematic, premium magazine feel. Dark-first.
+
+   Identity: editorial decks, narrative presentations, premium reports.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ──
+   Add to <head>:
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+   <link href=&quot;https://fonts.googleapis.com/css2?family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+*/
+
+/* ── Baseline Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	color-scheme: light dark;
+
+	/* Surfaces */
+	--bg: #0f1729;
+	--surface: #162040;
+	--surface2: #1d2b52;
+	--surface-elevated: #243362;
+	--border: rgba(200, 180, 140, 0.08);
+	--border-bright: rgba(200, 180, 140, 0.16);
+
+	/* Text */
+	--text: #e8e4d8;
+	--text-dim: #9a9484;
+	--text-muted: #7a7468;
+
+	/* Accent — warm gold */
+	--accent: #d4a73a;
+	--accent-dim: rgba(212, 167, 58, 0.1);
+	--accent-glow: rgba(212, 167, 58, 0.25);
+
+	/* Code */
+	--code-bg: #0a0f1e;
+	--code-text: #d4d0c4;
+}
+
+/* ── Baseline Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--bg: #faf8f2;
+	--surface: #ffffff;
+	--surface2: #f5f0e6;
+	--surface-elevated: #fffdf5;
+	--border: rgba(30, 30, 50, 0.08);
+	--border-bright: rgba(30, 30, 50, 0.16);
+
+	--text: #1a1814;
+	--text-dim: #7a7468;
+	--text-muted: #9a9484;
+
+	--accent: #b8860b;
+	--accent-dim: rgba(184, 134, 11, 0.08);
+	--accent-glow: rgba(184, 134, 11, 0.2);
+
+	--code-bg: #2a2520;
+	--code-text: #e8e4d8;
+}
+
+/* ── Semantic Color Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	--success: #4ade80;
+	--success-dim: rgba(74, 222, 128, 0.1);
+	--warning: #fbbf24;
+	--warning-dim: rgba(251, 191, 36, 0.1);
+	--error: #f87171;
+	--error-dim: rgba(248, 113, 113, 0.12);
+	--info: #22d3ee;
+	--info-dim: rgba(34, 211, 238, 0.12);
+
+	/* Extended palette */
+	--cyan: #22d3ee;
+	--cyan-dim: rgba(34, 211, 238, 0.12);
+	--green: #4ade80;
+	--green-dim: rgba(74, 222, 128, 0.1);
+	--amber: #fbbf24;
+	--amber-dim: rgba(251, 191, 36, 0.1);
+	--red: #f87171;
+	--red-dim: rgba(248, 113, 113, 0.12);
+	--purple: #c084fc;
+	--purple-dim: rgba(192, 132, 252, 0.1);
+}
+
+/* ── Semantic Color Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--success: #16a34a;
+	--success-dim: rgba(22, 163, 74, 0.1);
+	--warning: #d97706;
+	--warning-dim: rgba(217, 119, 6, 0.1);
+	--error: #dc2626;
+	--error-dim: rgba(220, 38, 38, 0.1);
+	--info: #0891b2;
+	--info-dim: rgba(8, 145, 178, 0.1);
+
+	--cyan: #0891b2;
+	--cyan-dim: rgba(8, 145, 178, 0.1);
+	--green: #16a34a;
+	--green-dim: rgba(22, 163, 74, 0.1);
+	--amber: #d97706;
+	--amber-dim: rgba(217, 119, 6, 0.1);
+	--red: #dc2626;
+	--red-dim: rgba(220, 38, 38, 0.1);
+	--purple: #7c3aed;
+	--purple-dim: rgba(124, 58, 237, 0.1);
+}
+
+/* ── Midnight Light — OS preference (unless manually dark) ── */
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme=&quot;dark&quot;]) {
+		--bg: #faf8f2;
+		--surface: #ffffff;
+		--surface2: #f5f0e6;
+		--surface-elevated: #fffdf5;
+		--border: rgba(30, 30, 50, 0.08);
+		--border-bright: rgba(30, 30, 50, 0.16);
+
+		--text: #1a1814;
+		--text-dim: #7a7468;
+		--text-muted: #9a9484;
+
+		--accent: #b8860b;
+		--accent-dim: rgba(184, 134, 11, 0.08);
+		--accent-glow: rgba(184, 134, 11, 0.2);
+
+		--code-bg: #2a2520;
+		--code-text: #e8e4d8;
+
+		--success: #16a34a;
+		--success-dim: rgba(22, 163, 74, 0.1);
+		--warning: #d97706;
+		--warning-dim: rgba(217, 119, 6, 0.1);
+		--error: #dc2626;
+		--error-dim: rgba(220, 38, 38, 0.1);
+		--info: #0891b2;
+		--info-dim: rgba(8, 145, 178, 0.1);
+
+		--cyan: #0891b2;
+		--cyan-dim: rgba(8, 145, 178, 0.1);
+		--green: #16a34a;
+		--green-dim: rgba(22, 163, 74, 0.1);
+		--amber: #d97706;
+		--amber-dim: rgba(217, 119, 6, 0.1);
+		--red: #dc2626;
+		--red-dim: rgba(220, 38, 38, 0.1);
+		--purple: #7c3aed;
+		--purple-dim: rgba(124, 58, 237, 0.1);
+	}
+}
+
+/* ── Typography Overrides ── */
+body {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+h1, h2, h3, h4 {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+code, pre, .mono {
+	font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Slide mode — midnight-editorial aesthetic (used by forge-slides)
+   Cinematic serif display, radial gold glow, decorative corners.
+   ══════════════════════════════════════════════════════════════════ */
+
+.deck .slide--title {
+	background-image:
+		radial-gradient(ellipse at 50% 20%, var(--accent-glow) 0%, transparent 55%),
+		linear-gradient(to bottom, var(--bg), var(--surface));
+}
+.deck .slide--title .slide__display {
+	font-family: 'Instrument Serif', Georgia, serif;
+	font-weight: 400;
+	letter-spacing: -2px;
+	color: var(--text);
+}
+.deck .slide--title .slide__subtitle {
+	color: var(--text-dim);
+	border-top: 1px solid var(--border-bright);
+	padding-top: 1rem;
+}
+.deck .slide--content .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--text);
+	letter-spacing: -1px;
+}
+.deck .slide--content .slide__label {
+	color: var(--accent);
+}
+.deck .slide--section .slide__number {
+	color: var(--accent);
+	opacity: 0.06;
+}
+.deck .slide--closing {
+	background-image:
+		radial-gradient(ellipse at 50% 70%, var(--accent-dim) 0%, transparent 60%),
+		linear-gradient(to top, var(--bg), var(--surface));
+}
+.deck .slide--closing .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--accent);
+}
+.deck .slide--closing .cta {
+	box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 32px 24px 40px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  header { margin-bottom: 20px; }
+  .header-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  h1 { font-size: 28px; font-weight: 700; margin: 6px 0 4px; font-family: 'Outfit', sans-serif; }
+  h1 .accent { color: var(--cyan); }
+  .header-subtitle { color: var(--text-dim); font-size: 13px; margin: 0; max-width: 740px; }
+
+  .fgraph-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
+  .fgraph-edges .fg-edge { fill: none; stroke-width: 1.6; opacity: 0.95; vector-effect: non-scaling-stroke; }
+  .fgraph-edges .fg-edge.amber  { stroke: var(--amber); }
+  .fgraph-edges .fg-edge.cyan   { stroke: var(--cyan); }
+  .fgraph-edges .fg-edge.purple { stroke: var(--purple); }
+  .fgraph-edges .fg-edge.green  { stroke: var(--green); }
+  .fgraph-edges .fg-edge.red    { stroke: var(--red); }
+  .fgraph-edges .fg-edge.dashed { stroke-dasharray: 4 3; }
+  .fgraph-edges .fg-edge.thick  { stroke-width: 2.6; }
+  .fgraph-edges .mk-amber  { fill: var(--amber); }
+  .fgraph-edges .mk-cyan   { fill: var(--cyan); }
+  .fgraph-edges .mk-purple { fill: var(--purple); }
+  .fgraph-edges .mk-green  { fill: var(--green); }
+  .fgraph-edges .mk-red    { fill: var(--red); }
+
+  .fgraph-lbl {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    transform: translate(-50%, -50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    background: var(--bg-panel);
+    border-radius: 3px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 3;
+  }
+  .fgraph-lbl.amber  { color: var(--amber); }
+  .fgraph-lbl.cyan   { color: var(--cyan); }
+  .fgraph-lbl.purple { color: var(--purple); }
+  .fgraph-lbl.green  { color: var(--green); }
+  .fgraph-lbl.red    { color: var(--red); }
+  .fgraph-lbl .dim   { color: var(--text-muted); font-weight: 400; }
+
+  .fgraph-legend {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .fgraph-wrap.sequence {
+    position: relative;
+    width: 100%;
+    --msg-count: 5;
+    height: calc(140px + var(--msg-count) * 40px);
+    max-width: 860px;
+    margin: 24px auto 20px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(34,211,238,0.35);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .fg-seq-participant {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top: 6%;
+    transform: translate(-50%, 0);
+    padding: 6px 14px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-bright);
+    border-radius: 999px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text);
+    white-space: nowrap;
+    z-index: 2;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .fg-seq-participant .sub {
+    display: block;
+    font-size: 8.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .fg-seq-participant.amber  { border-color: rgba(251,191,36,0.55);  color: var(--amber); }
+  .fg-seq-participant.cyan   { border-color: rgba(34,211,238,0.55);  color: var(--cyan); }
+  .fg-seq-participant.purple { border-color: rgba(167,139,250,0.55); color: var(--purple); }
+  .fg-seq-participant.green  { border-color: rgba(52,211,153,0.55);  color: var(--green); }
+  .fg-seq-participant.red    { border-color: rgba(251,113,133,0.55); color: var(--red); }
+
+  .fg-lifeline {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top: 18%;
+    bottom: 8%;
+    width: 0;
+    border-left: 1px dashed var(--border-bright);
+    pointer-events: none;
+  }
+
+  .fg-seq-msg-lbl {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    transform: translate(-50%, -120%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-dim);
+    background: var(--bg-panel);
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class=&quot;header-eyebrow&quot;>Lumen · Sequence diagram</div>
+  <h1>Inference + quota enforcement</h1>
+  <p class=&quot;header-subtitle&quot;>Atomic Redis counter in the callback</p>
+</header>
+
+<main>
+<div class=&quot;fgraph-wrap sequence&quot; style=&quot;--msg-count: 11;&quot; role=&quot;img&quot;
+     aria-label=&quot;Sequence diagram: Inference + quota enforcement. Client, LiteLLM proxy, flat_cost.py, Redis, devserver.&quot;>
+
+  <!-- ── PARTICIPANTS ───────────────────────────── -->
+  <div class=&quot;fg-seq-participant cyan&quot; style=&quot;--x:12.0&quot;>Client<span class=&quot;sub&quot;>user key</span></div>
+  <div class=&quot;fg-seq-participant amber&quot; style=&quot;--x:31.0&quot;>LiteLLM proxy</div>
+  <div class=&quot;fg-seq-participant amber&quot; style=&quot;--x:50.0&quot;>flat_cost.py</div>
+  <div class=&quot;fg-seq-participant red&quot; style=&quot;--x:69.0&quot;>Redis</div>
+  <div class=&quot;fg-seq-participant green&quot; style=&quot;--x:88.0&quot;>devserver<span class=&quot;sub&quot;>qwen3.5-4b</span></div>
+
+  <!-- ── LIFELINES ──────────────────────────────── -->
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:12.0&quot;></div>
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:31.0&quot;></div>
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:50.0&quot;></div>
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:69.0&quot;></div>
+  <div class=&quot;fg-lifeline&quot; style=&quot;--x:88.0&quot;></div>
+
+  <!-- ── MESSAGE ARROWS ─────────────────────────── -->
+  <svg class=&quot;fgraph-edges&quot; viewBox=&quot;0 0 100 100&quot; preserveAspectRatio=&quot;none&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;
+       style=&quot;position:absolute; inset:0; width:100%; height:100%;&quot;>
+
+    <defs>
+      <marker id=&quot;fg-arr-amber&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+      <marker id=&quot;fg-arr-amber-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan-bi&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple-bi&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red-bi&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+    </defs>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 12.0,24.0 L 31.0,24.0&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+    <path class=&quot;fg-edge amber&quot; d=&quot;M 31.0,30.2 L 50.0,30.2&quot; marker-end=&quot;url(#fg-arr-amber)&quot;/>
+    <path class=&quot;fg-edge red&quot; d=&quot;M 50.0,36.4 L 69.0,36.4&quot; marker-end=&quot;url(#fg-arr-red)&quot;/>
+    <path class=&quot;fg-edge red dashed&quot; d=&quot;M 69.0,42.6 L 50.0,42.6&quot; marker-end=&quot;url(#fg-arr-red)&quot;/>
+    <path class=&quot;fg-edge red&quot; d=&quot;M 50.0,48.8 L 69.0,48.8&quot; marker-end=&quot;url(#fg-arr-red)&quot;/>
+    <path class=&quot;fg-edge red dashed&quot; d=&quot;M 50.0,55.0 L 31.0,55.0&quot; marker-end=&quot;url(#fg-arr-red)&quot;/>
+    <path class=&quot;fg-edge green&quot; d=&quot;M 31.0,61.2 L 88.0,61.2&quot; marker-end=&quot;url(#fg-arr-green)&quot;/>
+    <path class=&quot;fg-edge green dashed&quot; d=&quot;M 88.0,67.4 L 50.0,67.4&quot; marker-end=&quot;url(#fg-arr-green)&quot;/>
+    <path class=&quot;fg-edge red&quot; d=&quot;M 50.0,73.6 L 69.0,73.6&quot; marker-end=&quot;url(#fg-arr-red)&quot;/>
+    <path class=&quot;fg-edge green dashed&quot; d=&quot;M 88.0,79.8 L 31.0,79.8&quot; marker-end=&quot;url(#fg-arr-green)&quot;/>
+    <path class=&quot;fg-edge amber dashed&quot; d=&quot;M 31.0,86.0 L 12.0,86.0&quot; marker-end=&quot;url(#fg-arr-amber)&quot;/>
+  </svg>
+
+  <!-- ── MESSAGE LABELS ─────────────────────────── -->
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:21.5; --y:24.0;&quot;>POST /chat/completions</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:40.5; --y:30.2;&quot;>async_pre_call_hook</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:36.4;&quot;>INCR reqcount:{user}:{day}</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:42.6;&quot;>count (EXPIREAT midnight if first)</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:48.8;&quot;>if over cap: DECR (no slot)</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:40.5; --y:55.0;&quot;>over cap → BudgetExceededError → 429</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:61.2;&quot;>within cap → forward</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:69.0; --y:67.4;&quot;>upstream fail → post_call_failure_hook</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:73.6;&quot;>refund slot (DECR)</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:59.5; --y:79.8;&quot;>success → completion</div>
+  <div class=&quot;fg-seq-msg-lbl&quot; style=&quot;--x:21.5; --y:86.0;&quot;>200 / 429</div>
+
+  <div class=&quot;fgraph-legend&quot;>Redis down → fail open (never block). Own cap-rejection excluded from refund.</div>
+</div>
+</main>
+
+</body>
+</html>"></iframe>
+
+  <h2>Dashboard usage read</h2>
+  <p>The dashboard polls <code>/api/usage</code> every 5s (and on window focus). Redis is the source of truth; LiteLLM's daily table is the fallback so an infra hiccup doesn't zero the display.</p>
+  <iframe class="diagram" loading="lazy" height="500" srcdoc="<!DOCTYPE html>
+<html lang=&quot;en&quot; data-theme=&quot;dark&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;>
+<meta name=&quot;generator&quot; content=&quot;lumen / fgraph deterministic renderer&quot;>
+<title>Dashboard usage read</title>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+<link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+<link href=&quot;https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=Outfit:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   midnight-editorial.css — deep navy, serif display, warm gold accents.
+   Cinematic, premium magazine feel. Dark-first.
+
+   Identity: editorial decks, narrative presentations, premium reports.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ──
+   Add to <head>:
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;>
+   <link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin>
+   <link href=&quot;https://fonts.googleapis.com/css2?family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
+*/
+
+/* ── Baseline Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	color-scheme: light dark;
+
+	/* Surfaces */
+	--bg: #0f1729;
+	--surface: #162040;
+	--surface2: #1d2b52;
+	--surface-elevated: #243362;
+	--border: rgba(200, 180, 140, 0.08);
+	--border-bright: rgba(200, 180, 140, 0.16);
+
+	/* Text */
+	--text: #e8e4d8;
+	--text-dim: #9a9484;
+	--text-muted: #7a7468;
+
+	/* Accent — warm gold */
+	--accent: #d4a73a;
+	--accent-dim: rgba(212, 167, 58, 0.1);
+	--accent-glow: rgba(212, 167, 58, 0.25);
+
+	/* Code */
+	--code-bg: #0a0f1e;
+	--code-text: #d4d0c4;
+}
+
+/* ── Baseline Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--bg: #faf8f2;
+	--surface: #ffffff;
+	--surface2: #f5f0e6;
+	--surface-elevated: #fffdf5;
+	--border: rgba(30, 30, 50, 0.08);
+	--border-bright: rgba(30, 30, 50, 0.16);
+
+	--text: #1a1814;
+	--text-dim: #7a7468;
+	--text-muted: #9a9484;
+
+	--accent: #b8860b;
+	--accent-dim: rgba(184, 134, 11, 0.08);
+	--accent-glow: rgba(184, 134, 11, 0.2);
+
+	--code-bg: #2a2520;
+	--code-text: #e8e4d8;
+}
+
+/* ── Semantic Color Tokens — Midnight Dark ── */
+:root,
+[data-theme=&quot;dark&quot;] {
+	--success: #4ade80;
+	--success-dim: rgba(74, 222, 128, 0.1);
+	--warning: #fbbf24;
+	--warning-dim: rgba(251, 191, 36, 0.1);
+	--error: #f87171;
+	--error-dim: rgba(248, 113, 113, 0.12);
+	--info: #22d3ee;
+	--info-dim: rgba(34, 211, 238, 0.12);
+
+	/* Extended palette */
+	--cyan: #22d3ee;
+	--cyan-dim: rgba(34, 211, 238, 0.12);
+	--green: #4ade80;
+	--green-dim: rgba(74, 222, 128, 0.1);
+	--amber: #fbbf24;
+	--amber-dim: rgba(251, 191, 36, 0.1);
+	--red: #f87171;
+	--red-dim: rgba(248, 113, 113, 0.12);
+	--purple: #c084fc;
+	--purple-dim: rgba(192, 132, 252, 0.1);
+}
+
+/* ── Semantic Color Tokens — Midnight Light ── */
+[data-theme=&quot;light&quot;] {
+	--success: #16a34a;
+	--success-dim: rgba(22, 163, 74, 0.1);
+	--warning: #d97706;
+	--warning-dim: rgba(217, 119, 6, 0.1);
+	--error: #dc2626;
+	--error-dim: rgba(220, 38, 38, 0.1);
+	--info: #0891b2;
+	--info-dim: rgba(8, 145, 178, 0.1);
+
+	--cyan: #0891b2;
+	--cyan-dim: rgba(8, 145, 178, 0.1);
+	--green: #16a34a;
+	--green-dim: rgba(22, 163, 74, 0.1);
+	--amber: #d97706;
+	--amber-dim: rgba(217, 119, 6, 0.1);
+	--red: #dc2626;
+	--red-dim: rgba(220, 38, 38, 0.1);
+	--purple: #7c3aed;
+	--purple-dim: rgba(124, 58, 237, 0.1);
+}
+
+/* ── Midnight Light — OS preference (unless manually dark) ── */
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme=&quot;dark&quot;]) {
+		--bg: #faf8f2;
+		--surface: #ffffff;
+		--surface2: #f5f0e6;
+		--surface-elevated: #fffdf5;
+		--border: rgba(30, 30, 50, 0.08);
+		--border-bright: rgba(30, 30, 50, 0.16);
+
+		--text: #1a1814;
+		--text-dim: #7a7468;
+		--text-muted: #9a9484;
+
+		--accent: #b8860b;
+		--accent-dim: rgba(184, 134, 11, 0.08);
+		--accent-glow: rgba(184, 134, 11, 0.2);
+
+		--code-bg: #2a2520;
+		--code-text: #e8e4d8;
+
+		--success: #16a34a;
+		--success-dim: rgba(22, 163, 74, 0.1);
+		--warning: #d97706;
+		--warning-dim: rgba(217, 119, 6, 0.1);
+		--error: #dc2626;
+		--error-dim: rgba(220, 38, 38, 0.1);
+		--info: #0891b2;
+		--info-dim: rgba(8, 145, 178, 0.1);
+
+		--cyan: #0891b2;
+		--cyan-dim: rgba(8, 145, 178, 0.1);
+		--green: #16a34a;
+		--green-dim: rgba(22, 163, 74, 0.1);
+		--amber: #d97706;
+		--amber-dim: rgba(217, 119, 6, 0.1);
+		--red: #dc2626;
+		--red-dim: rgba(220, 38, 38, 0.1);
+		--purple: #7c3aed;
+		--purple-dim: rgba(124, 58, 237, 0.1);
+	}
+}
+
+/* ── Typography Overrides ── */
+body {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+h1, h2, h3, h4 {
+	font-family: 'Instrument Serif', Georgia, serif;
+}
+
+code, pre, .mono {
+	font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Slide mode — midnight-editorial aesthetic (used by forge-slides)
+   Cinematic serif display, radial gold glow, decorative corners.
+   ══════════════════════════════════════════════════════════════════ */
+
+.deck .slide--title {
+	background-image:
+		radial-gradient(ellipse at 50% 20%, var(--accent-glow) 0%, transparent 55%),
+		linear-gradient(to bottom, var(--bg), var(--surface));
+}
+.deck .slide--title .slide__display {
+	font-family: 'Instrument Serif', Georgia, serif;
+	font-weight: 400;
+	letter-spacing: -2px;
+	color: var(--text);
+}
+.deck .slide--title .slide__subtitle {
+	color: var(--text-dim);
+	border-top: 1px solid var(--border-bright);
+	padding-top: 1rem;
+}
+.deck .slide--content .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--text);
+	letter-spacing: -1px;
+}
+.deck .slide--content .slide__label {
+	color: var(--accent);
+}
+.deck .slide--section .slide__number {
+	color: var(--accent);
+	opacity: 0.06;
+}
+.deck .slide--closing {
+	background-image:
+		radial-gradient(ellipse at 50% 70%, var(--accent-dim) 0%, transparent 60%),
+		linear-gradient(to top, var(--bg), var(--surface));
+}
+.deck .slide--closing .slide__heading {
+	font-family: 'Instrument Serif', Georgia, serif;
+	color: var(--accent);
+}
+.deck .slide--closing .cta {
+	box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 32px 24px 40px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  header { margin-bottom: 20px; }
+  .header-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  h1 { font-size: 28px; font-weight: 700; margin: 6px 0 4px; font-family: 'Outfit', sans-serif; }
+  h1 .accent { color: var(--cyan); }
+  .header-subtitle { color: var(--text-dim); font-size: 13px; margin: 0; max-width: 740px; }
+
+  .fgraph-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
+  .fgraph-edges .fg-edge { fill: none; stroke-width: 1.6; opacity: 0.95; vector-effect: non-scaling-stroke; }
+  .fgraph-edges .fg-edge.amber  { stroke: var(--amber); }
+  .fgraph-edges .fg-edge.cyan   { stroke: var(--cyan); }
+  .fgraph-edges .fg-edge.purple { stroke: var(--purple); }
+  .fgraph-edges .fg-edge.green  { stroke: var(--green); }
+  .fgraph-edges .fg-edge.red    { stroke: var(--red); }
+  .fgraph-edges .fg-edge.dashed { stroke-dasharray: 4 3; }
+  .fgraph-edges .fg-edge.thick  { stroke-width: 2.6; }
+  .fgraph-edges .mk-amber  { fill: var(--amber); }
+  .fgraph-edges .mk-cyan   { fill: var(--cyan); }
+  .fgraph-edges .mk-purple { fill: var(--purple); }
+  .fgraph-edges .mk-green  { fill: var(--green); }
+  .fgraph-edges .mk-red    { fill: var(--red); }
+
+  .fgraph-lbl {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    transform: translate(-50%, -50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    background: var(--bg-panel);
+    border-radius: 3px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 3;
+  }
+  .fgraph-lbl.amber  { color: var(--amber); }
+  .fgraph-lbl.cyan   { color: var(--cyan); }
+  .fgraph-lbl.purple { color: var(--purple); }
+  .fgraph-lbl.green  { color: var(--green); }
+  .fgraph-lbl.red    { color: var(--red); }
+  .fgraph-lbl .dim   { color: var(--text-muted); font-weight: 400; }
+
+  .fgraph-legend {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .fgraph-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 880px;
+    aspect-ratio: 16 / 10;
+    margin: 24px auto 16px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(34,211,238,0.35);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .fgraph-node {
+    position: absolute;
+    left: calc(var(--x, 50) * 1%);
+    top:  calc(var(--y, 50) * 1%);
+    width: var(--w, 14%);
+    transform: translate(-50%, -50%);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-bright);
+    border-radius: 12px;
+    padding: 10px 8px 11px;
+    text-align: center;
+    z-index: 2;
+  }
+  .fgraph-node.amber  { border-color: var(--amber);  background: rgba(251,191,36,0.10); }
+  .fgraph-node.cyan   { border-color: var(--cyan);   background: rgba(34,211,238,0.10); }
+  .fgraph-node.purple { border-color: var(--purple); background: rgba(167,139,250,0.10); }
+  .fgraph-node.green  { border-color: var(--green);  background: rgba(52,211,153,0.10); }
+  .fgraph-node.red    { border-color: var(--red);    background: rgba(251,113,133,0.10); }
+
+  /* shape variants */
+  .fgraph-node.pill { border-radius: 999px; padding: 12px 14px; }
+  .fgraph-node.cylinder {
+    border: none;
+    border-left: 1.5px solid var(--border-bright);
+    border-right: 1.5px solid var(--border-bright);
+    border-radius: 0;
+    background: var(--bg-card);
+    padding: 14px 8px 11px;
+  }
+  .fgraph-node.cylinder.amber  { border-color: var(--amber);  background: rgba(251,191,36,0.10); }
+  .fgraph-node.cylinder.cyan   { border-color: var(--cyan);   background: rgba(34,211,238,0.10); }
+  .fgraph-node.cylinder.purple { border-color: var(--purple); background: rgba(167,139,250,0.10); }
+  .fgraph-node.cylinder.green  { border-color: var(--green);  background: rgba(52,211,153,0.10); }
+  .fgraph-node.hexagon {
+    clip-path: polygon(15% 0%, 85% 0%, 100% 50%, 85% 100%, 15% 100%, 0% 50%);
+    padding: 12px 14px;
+  }
+
+  .fgraph-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .fgraph-title.amber  { color: var(--amber); }
+  .fgraph-title.cyan   { color: var(--cyan); }
+  .fgraph-title.purple { color: var(--purple); }
+  .fgraph-title.green  { color: var(--green); }
+  .fgraph-title.red    { color: var(--red); }
+
+  .fgraph-sub {
+    margin-top: 3px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    line-height: 1.3;
+    color: var(--text-dim);
+  }
+  .fgraph-sub.muted { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class=&quot;header-eyebrow&quot;>Lumen · Linear flow</div>
+  <h1>Dashboard usage read</h1>
+  <p class=&quot;header-subtitle&quot;>Redis-first, LiteLLM fallback</p>
+</header>
+
+<main>
+<div class=&quot;fgraph-wrap&quot; role=&quot;img&quot; aria-label=&quot;Linear flow: Dashboard usage read. UsageCardClient → GET /api/usage → buildUsageSummary() → getRedisRequestCount() → LiteLLM daily activity → UsageSummary.&quot;>
+
+  <!-- ── EDGES ───────────────────────────────────── -->
+  <svg class=&quot;fgraph-edges&quot; viewBox=&quot;0 0 100 100&quot; preserveAspectRatio=&quot;none&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;>
+
+    <defs>
+      <marker id=&quot;fg-arr-amber&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+      <marker id=&quot;fg-arr-amber-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-amber&quot;/></marker>
+      <marker id=&quot;fg-arr-cyan-bi&quot;   viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-cyan&quot;/></marker>
+      <marker id=&quot;fg-arr-purple-bi&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-purple&quot;/></marker>
+      <marker id=&quot;fg-arr-green-bi&quot;  viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-green&quot;/></marker>
+      <marker id=&quot;fg-arr-red-bi&quot;    viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;><path d=&quot;M0,0 L10,5 L0,10 z&quot; class=&quot;mk-red&quot;/></marker>
+    </defs>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 15.0,50 L 21.0,50&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+    <path class=&quot;fg-edge cyan&quot; d=&quot;M 31.0,50 L 37.0,50&quot; marker-end=&quot;url(#fg-arr-cyan)&quot;/>
+    <path class=&quot;fg-edge purple&quot; d=&quot;M 47.0,50 L 53.0,50&quot; marker-end=&quot;url(#fg-arr-purple)&quot;/>
+    <path class=&quot;fg-edge purple&quot; d=&quot;M 63.0,50 L 85.0,50&quot; marker-end=&quot;url(#fg-arr-purple)&quot;/>
+    <path class=&quot;fg-edge amber dashed&quot; d=&quot;M 63.0,50 L 69.0,50&quot; marker-end=&quot;url(#fg-arr-amber)&quot;/>
+    <path class=&quot;fg-edge purple&quot; d=&quot;M 79.0,50 L 85.0,50&quot; marker-end=&quot;url(#fg-arr-purple)&quot;/>
+  </svg>
+
+  <!-- ── EDGE LABELS ───────────────────────────── -->
+  <div class=&quot;fgraph-lbl purple&quot; style=&quot;--x:50.0; --y:42;&quot;>try</div>
+  <div class=&quot;fgraph-lbl purple&quot; style=&quot;--x:74.0; --y:42;&quot;>ok</div>
+  <div class=&quot;fgraph-lbl amber&quot; style=&quot;--x:66.0; --y:42;&quot;>Redis down</div>
+  <div class=&quot;fgraph-lbl purple&quot; style=&quot;--x:82.0; --y:42;&quot;>ok (else used=0)</div>
+
+  <!-- ── STAGES ─────────────────────────────────── -->
+  <div class=&quot;fgraph-node cyan&quot; style=&quot;--x:10.0; --y:50;&quot;>
+    <div class=&quot;fgraph-title cyan&quot;>UsageCardClient</div>
+    <div class=&quot;fgraph-sub&quot;>5s poll + focus</div>
+  </div>
+  <div class=&quot;fgraph-node purple&quot; style=&quot;--x:26.0; --y:50;&quot;>
+    <div class=&quot;fgraph-title purple&quot;>GET /api/usage</div>
+  </div>
+  <div class=&quot;fgraph-node purple&quot; style=&quot;--x:42.0; --y:50;&quot;>
+    <div class=&quot;fgraph-title purple&quot;>buildUsageSummary()</div>
+  </div>
+  <div class=&quot;fgraph-node red&quot; style=&quot;--x:58.0; --y:50;&quot;>
+    <div class=&quot;fgraph-title red&quot;>getRedisRequestCount()</div>
+    <div class=&quot;fgraph-sub&quot;>source of truth</div>
+  </div>
+  <div class=&quot;fgraph-node amber&quot; style=&quot;--x:74.0; --y:50;&quot;>
+    <div class=&quot;fgraph-title amber&quot;>LiteLLM daily activity</div>
+    <div class=&quot;fgraph-sub&quot;>fallback if Redis down</div>
+  </div>
+  <div class=&quot;fgraph-node green&quot; style=&quot;--x:90.0; --y:50;&quot;>
+    <div class=&quot;fgraph-title green&quot;>UsageSummary</div>
+    <div class=&quot;fgraph-sub&quot;>used / cap / remaining / resetsInHours</div>
+  </div>
+  <div class=&quot;fgraph-legend&quot;>getOrgForUser() returns null → not provisioned</div>
+</div>
+</main>
+
+</body>
+</html>"></iframe>
+</section>
+
+<!-- DECISIONS -->
+<section class="panel" data-panel="decisions" role="tabpanel">
+  <div class="hero"><div class="eyebrow">Decisions</div><h1>Why it's built this way</h1><p class="lede">The choices that shaped the architecture, with the alternative each one rejected.</p></div>
+
+  <div class="card accent"><h3>Redis <code>INCR</code> over LiteLLM's daily-activity table for enforcement</h3>
+    <p class="why"><b>Alternative:</b> read LiteLLM's own per-user daily count. <b>Rejected because</b> that table is batch-flushed (~10s) — a burst all reads the same stale count and leaks past the cap. The atomic counter is exact under concurrency. LiteLLM's table is still written as historical record, just not read for enforcement.</p></div>
+
+  <div class="card accent"><h3>Enforce in a LiteLLM callback, not Next.js middleware</h3>
+    <p class="why"><b>Alternative:</b> gate requests in Next middleware. <b>Rejected because</b> the customer hits the proxy directly, so the cap has to live there — and the Redis v4 client can't run on Next's Edge runtime anyway.</p></div>
+
+  <div class="card accent"><h3>Fail open on Redis down</h3>
+    <p class="why"><b>Alternative:</b> fail closed (block when the counter is unreachable). <b>Rejected because</b> a quota-store outage should degrade to "unmetered", never to "all traffic blocked".</p></div>
+
+  <div class="card accent"><h3>Idempotent provisioning on every load, not a one-shot signup webhook</h3>
+    <p class="why"><b>Alternative:</b> provision once at signup. <b>Rejected because</b> a half-failed attempt (org created, key generation failed) would need manual repair. Re-running each load with "already exists" caught everywhere self-heals.</p></div>
+
+  <div class="card accent"><h3>Keys encrypted at rest (AES-256-GCM), never stored raw</h3>
+    <p class="why"><b>Alternative:</b> store the raw key for easy reveal. <b>Rejected because</b> a DB leak would expose live credentials. Reveal decrypts on demand; the dashboard only shows the masked form.</p></div>
+
+  <div class="card accent"><h3><code>litellm_user_id == Better Auth user id</code></h3>
+    <p class="why"><b>Alternative:</b> a mapping table between auth users and LiteLLM users. <b>Rejected because</b> reusing the id threads session → plan → key → quota counter with zero extra joins.</p></div>
+</section>
+
+<div class="foot">
+  Generated with Lumen · diagrams rendered by <code>generateDiagramTemplate</code> (system-architecture · sequence · linear-flow · er) · aesthetic midnight-editorial. Source of truth: this repo's <code>src/lib/*</code>, <code>litellm/callbacks/flat_cost.py</code>, <code>config.yaml</code>, <code>docker-compose.yml</code>.
+</div>
+
+<button class="theme-btn" id="theme-toggle" aria-pressed="false">◑ light</button>
+<script>
+  var root=document.documentElement, btn=document.getElementById('theme-toggle');
+  var saved=localStorage.getItem('lumen-theme'); if(saved) root.setAttribute('data-theme',saved);
+  function syncBtn(){var l=root.getAttribute('data-theme')==='light';btn.textContent=l?'◐ dark':'◑ light';btn.setAttribute('aria-pressed',String(l));}
+  syncBtn();
+  btn.addEventListener('click',function(){var n=root.getAttribute('data-theme')==='light'?'dark':'light';root.setAttribute('data-theme',n);localStorage.setItem('lumen-theme',n);syncBtn();});
+  function activate(id){
+    document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('active',t.dataset.tab===id));
+    document.querySelectorAll('[data-panel]').forEach(p=>p.classList.toggle('active',p.dataset.panel===id));
+    location.hash=id;
+  }
+  document.querySelectorAll('[data-tab]').forEach(t=>{
+    t.addEventListener('click',()=>activate(t.dataset.tab));
+    t.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate(t.dataset.tab);}});
+  });
+  var start=(location.hash||'').replace('#','');
+  var valid=document.querySelector('[data-tab="'+start+'"]');
+  activate(valid?start:'overview');
+  // in-page anchor links to Components cards should switch tab first
+  document.querySelectorAll('.idx a[href^="#c-"]').forEach(a=>{
+    a.addEventListener('click',e=>{e.preventDefault();activate('components');document.querySelector(a.getAttribute('href'))?.scrollIntoView({behavior:'smooth'});});
+  });
+</script>
+</body>
+</html>

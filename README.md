@@ -4,6 +4,7 @@ AI-generated single-file HTML presentations built with [Lumen](https://github.co
 
 ## Showcase
 
+- [Zosma LLM Reseller — Architecture](zosma-reseller-architecture.html)
 - [LLM API Reseller — Build Guide](llm-reseller-guide.html)
 - [Prototype Skill](prototype-skill.html)
 - [Research Skill](research-skill.html)

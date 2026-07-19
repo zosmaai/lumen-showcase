@@ -1,5 +1,10 @@
 [
   {
+    "file": "zosma-reseller-architecture.html",
+    "title": "Zosma LLM Reseller — Architecture",
+    "date": "2026-07-19"
+  },
+  {
     "file": "llm-reseller-guide.html",
     "title": "LLM API Reseller — Build Guide",
     "date": "2026-07-14"
