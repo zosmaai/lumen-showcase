@@ -4,10 +4,10 @@ AI-generated single-file HTML presentations built with [Lumen](https://github.co
 
 ## Showcase
 
-- [Zosma LLM Reseller — Architecture](zosma-reseller-architecture.html)
+- [Pi Advisor Extensions — Comparison](pi-advisor-comparison.html)
 - [Zosma LLM Reseller — Architecture](zosma-reseller-architecture.html)
 - [LLM API Reseller — Build Guide](llm-reseller-guide.html)
+- [Navigator Strategy](navigator-strategy.html)
 - [Prototype Skill](prototype-skill.html)
 - [Research Skill](research-skill.html)
-- [Navigator Strategy](navigator-strategy.html)
 - [Wayfinder Ecosystem](wayfinder-ecosystem.html)
