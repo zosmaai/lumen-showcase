@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pi Advisor Extensions — Comparison Guide</title>
+<style>
+:root{--bg:#0a0a0a;--surface:#111;--surface-2:#181818;--border:#222;--text:#e8e8e8;--text-dim:#888;--accent:#6ee7b7;--accent-2:#38bdf8;--warn:#facc15;--danger:#ef4444;--radius:8px;--shadow:0 4px 12px rgba(0,0,0,.5);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif}
+@media(prefers-color-scheme:light){:root{--bg:#fafafa;--surface:#fff;--surface-2:#f5f5f5;--border:#ddd;--text:#111;--text-dim:#666;--shadow:0 4px 12px rgba(0,0,0,.1)}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);line-height:1.6;font-size:16px;max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
+a:hover{border-bottom-color:var(--accent)}
+h1,h2,h3{font-weight:600;letter-spacing:-.02em}
+h1{font-size:2rem;margin-bottom:.5rem}
+h2{font-size:1.5rem;margin:2rem 0 1rem}
+h3{font-size:1.15rem;margin:1.25rem 0 .75rem}
+p{margin-bottom:1rem}
+ul{margin:0 0 1rem 1.5rem}
+li{margin-bottom:.35rem}
+
+.hero{padding:1.5rem 1.75rem;border-left:3px solid var(--accent);background:var(--surface);border-radius:var(--radius);margin-bottom:1.5rem}
+.hero h1{margin-bottom:.25rem}
+.hero .subtitle{color:var(--text-dim);font-size:.95rem}
+
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1.5rem}
+.stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}
+.stat-tile .num{font-size:1.75rem;font-weight:700;color:var(--accent)}
+.stat-tile .label{font-size:.85rem;color:var(--text-dim);margin-top:.25rem}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
+.card.accent{border-color:var(--accent)}
+.card.info{border-color:var(--accent-2)}
+.card.warning{border-color:var(--warn)}
+.card.critical{border-color:var(--danger)}
+.card .card-title{font-weight:600;margin-bottom:.5rem}
+
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.95rem}
+th,td{padding:.65rem .75rem;text-align:left;border-bottom:1px solid var(--border)}
+th{font-weight:600;color:var(--text-dim);font-size:.85rem;text-transform:uppercase;letter-spacing:.03em}
+tr:last-child td{border-bottom:none}
+
+.section-label{display:inline-flex;align-items:center;gap:.5rem;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-bottom:.75rem}
+.section-label::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+
+.finding{padding:.75rem 1rem;border-radius:var(--radius);margin-bottom:.75rem;font-size:.95rem}
+.finding--high{background:rgba(239,68,68,.1);border-left:3px solid var(--danger)}
+.finding--medium{background:rgba(250,204,21,.1);border-left:3px solid var(--warn)}
+.finding--low{background:rgba(110,231,183,.08);border-left:3px solid var(--accent)}
+.finding .badge{display:inline-block;font-size:.7rem;font-weight:700;text-transform:uppercase;padding:.15rem .5rem;border-radius:999px;margin-right:.5rem}
+.finding--high .badge{background:var(--danger);color:#fff}
+.finding--medium .badge{background:var(--warn);color:#000}
+.finding--low .badge{background:var(--accent);color:#000}
+
+.tabs{display:flex;gap:.5rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:0;flex-wrap:wrap}
+.tab-btn{padding:.6rem 1rem;border:none;background:transparent;color:var(--text-dim);cursor:pointer;font-size:.9rem;font-weight:500;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+details.disclosure{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem 1rem;margin-bottom:.75rem}
+details.disclosure summary{cursor:pointer;font-weight:500;list-style:none;display:flex;align-items:center;gap:.5rem}
+details.disclosure summary::before{content:'▸';transition:transform .15s}
+details.disclosure[open] summary::before{transform:rotate(90deg)}
+details.disclosure .content{margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border);font-size:.95rem}
+
+@media(max-width:768px){body{padding:1.25rem 1rem}.tabs{flex-direction:column;border-bottom:none}.tab-btn{border-bottom:none;border-left:2px solid transparent;padding:.5rem .75rem}.tab-btn.active{border-left-color:var(--accent)}}
+
+</style>
+</head>
+<body>
+
+<nav class="tabs" role="tablist" aria-label="Main navigation">
+<button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="tab-overview">Overview</button>
+<button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-patterns" data-tab="tab-patterns">Patterns</button>
+<button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-comparison" data-tab="tab-comparison">Comparison</button>
+<button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-decisions" data-tab="tab-decisions">Decisions</button>
+<button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-reference" data-tab="tab-reference">Reference</button>
+</nav>
+
+<!-- TAB: Overview -->
+<section id="tab-overview" class="tab-panel active" role="tabpanel">
+<div class="hero">
+<h1>Pi Advisor Extensions</h1>
+<p class="subtitle">A comparison of 8 implementations for turn-by-turn agent guidance</p>
+</div>
+
+<div class="stat-grid">
+<div class="stat-tile"><div class="num">8</div><div class="label">Extensions mapped</div></div>
+<div class="stat-tile"><div class="num">3</div><div class="label">Design patterns</div></div>
+<div class="stat-tile"><div class="num">12</div><div class="label">Max stars (RimuruW)</div></div>
+<div class="stat-tile"><div class="num">4</div><div class="label">Published on npm/pi.dev</div></div>
+</div>
+
+<div class="section-label">What this is</div>
+<p>Pi extensions that add a second "advisor" model to review, guide, or audit the primary agent's work. All share the same goal — prevent the executor from going off the rails — but diverge sharply on <em>when</em> and <em>how</em> the advisor speaks.</p>
+
+<div class="card accent">
+<div class="card-title">Key finding</div>
+<p>No two implementations share the same activation model. Choosing one is choosing a philosophy: trust the executor to ask for help, shadow every turn silently, or run a full parallel reviewer.</p>
+</div>
+
+<div class="section-label">Quick recommendation</div>
+<ul>
+<li><strong>Best balance:</strong> <a href="https://github.com/pasky/pi-omplike-advisor">pasky/pi-omplike-advisor</a> — persistent review, graded severity, self-compacting context, published on pi.dev</li>
+<li><strong>Direct interrogation:</strong> <a href="https://github.com/kkkiio/pi-advisor">kkkiio/pi-advisor</a> — overlay UI lets you chat with advisor independently</li>
+<li><strong>Lightest entry:</strong> <a href="https://github.com/RimuruW/pi-advisor">RimuruW/pi-advisor</a> — on-demand tool, zero overhead when not used</li>
+</ul>
+
+<div class="section-label">The 3 patterns at a glance</div>
+<div class="finding finding--low"><span class="badge">Pattern 1</span>On-demand tool — executor calls advisor() when stuck</div>
+<div class="finding finding--medium"><span class="badge">Pattern 2</span>Persistent auto-review — advisor shadows every turn, emits graded notes</div>
+<div class="finding finding--high"><span class="badge">Pattern 3</span>Full peer agent — independent second agent with overlay UI and direct chat</div>
+</section>
+
+<!-- TAB: Patterns -->
+<section id="tab-patterns" class="tab-panel" role="tabpanel">
+<div class="section-label">Pattern 1: On-Demand Tool</div>
+<p>Executor gets an <code>advisor()</code> tool. It decides when to call it — before big decisions, when stuck, or at completion. Advisor model sees curated transcript subset, returns strategic guidance.</p>
+
+<table>
+<thead><tr><th>Extension</th><th>Stars</th><th>Install</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><a href="https://github.com/RimuruW/pi-advisor">RimuruW/pi-advisor</a></td><td>12</td><td><code>pi install npm:pi-advisor</code></td><td>Stage-aware prompts, slash commands, configurable model</td></tr>
+<tr><td><a href="https://github.com/hknet/pi-extensions">hknet/pi-advisor</a></td><td>0</td><td><code>pi install npm:@hk_net/pi-advisor</code></td><td>Auto-nudges opt-in, manual review via <code>/advise</code></td></tr>
+<tr><td><a href="https://github.com/luongnv89/pi-extensions">luongnv89/advisor-pi</a></td><td>0</td><td>Manual copy</td><td>Simplest — tool only, no auto-triggers</td></tr>
+</tbody>
+</table>
+
+<div class="card info">
+<div class="card-title">Best for</div>
+<p>Lightweight guidance where you trust the executor to recognize when it needs help. Zero overhead when advisor isn't called.</p>
+</div>
+<div class="card warning">
+<div class="card-title">Weakness</div>
+<p>A dumb executor never asks. You get no second opinion unless the executor knows to request one.</p>
+</div>
+
+<div class="section-label">Pattern 2: Persistent Auto-Review</div>
+<p>Separate long-lived advisor agent runs in parallel. After each executor turn, advisor reviews the delta and emits graded notes: <strong>nit</strong> / <strong>concern</strong> / <strong>blocker</strong>. Advisor is read-only — cannot edit files or run commands.</p>
+
+<table>
+<thead><tr><th>Extension</th><th>Stars</th><th>Install</th><th>Key difference</th></tr></thead>
+<tbody>
+<tr><td><a href="https://github.com/pasky/pi-omplike-advisor">pasky/pi-omplike-advisor</a></td><td>7</td><td><code>pi install npm:pi-omplike-advisor</code></td><td>Nits immediate; concerns/blockers held &amp; re-confirmed before delivery</td></tr>
+<tr><td><a href="https://github.com/Hopsken/pi-advisor">Hopsken/pi-advisor</a></td><td>0</td><td>Path-load only</td><td>Three severity levels with distinct delivery semantics</td></tr>
+<tr><td><a href="https://github.com/ribbons-digital/pi-advisor">ribbons-digital/pi-advisor</a></td><td>0</td><td><code>pi install npm:@ribbons-digital/pi-advisor</code></td><td>Silence-first, active/deferred/restored/stale delivery states</td></tr>
+</tbody>
+</table>
+
+<div class="card accent">
+<div class="card-title">Best for</div>
+<p>Continuous quality assurance. Catches issues the executor misses — wrong assumptions, stale state, security gaps — without the executor needing to know to ask.</p>
+</div>
+<div class="card warning">
+<div class="card-title">Weakness</div>
+<p>Extra model cost every turn. Noise risk if advisor is too aggressive. Requires tuning.</p>
+</div>
+
+<div class="section-label">Pattern 3: Full Peer Agent</div>
+<p>Advisor is a complete second agent session with its own context window. Can be auto-triggered (loops, failures, completion) or manually consulted. User can directly chat with advisor for independent review.</p>
+
+<table>
+<thead><tr><th>Extension</th><th>Stars</th><th>Install</th><th>Key feature</th></tr></thead>
+<tbody>
+<tr><td><a href="https://github.com/philipbrembeck/pi-advisor">philipbrembeck/pi-advisor</a></td><td>0</td><td><code>pi install npm:pi-advisor-flow</code></td><td>Context slider (0→ALL chars), manual parallel consultations via <code>/advisor-manual</code></td></tr>
+<tr><td><a href="https://github.com/kkkiio/pi-advisor">kkkiio/pi-advisor</a></td><td>0</td><td><code>pi install npm:@kkkiio/pi-advisor</code></td><td>Overlay UI for direct user↔advisor chat; advisor can pull transcript itself</td></tr>
+</tbody>
+</table>
+
+<div class="card info">
+<div class="card-title">Best for</div>
+<p>Complex, high-stakes tasks where you want an independent reviewer you can interrogate directly while the executor works.</p>
+</div>
+<div class="card warning">
+<div class="card-title">Weakness</div>
+<p>Heaviest weight. Two full agents running. Highest cost.</p>
+</div>
+</section>
+
+<!-- TAB: Comparison -->
+<section id="tab-comparison" class="tab-panel" role="tabpanel">
+<div class="section-label">Full comparison matrix</div>
+
+<table>
+<thead><tr><th>Extension</th><th>Pattern</th><th>Stars</th><th>npm</th><th>Auto-review</th><th>Direct chat</th><th>Severity grades</th></tr></thead>
+<tbody>
+<tr><td><a href="https://github.com/pasky/pi-omplike-advisor">pasky/pi-omplike-advisor</a></td><td>Auto-review</td><td>7</td><td>✓</td><td>✓</td><td>✗</td><td>nit/concern/blocker</td></tr>
+<tr><td><a href="https://github.com/RimuruW/pi-advisor">RimuruW/pi-advisor</a></td><td>On-demand</td><td>12</td><td>✓</td><td>✗</td><td>✗</td><td>stage-aware</td></tr>
+<tr><td><a href="https://github.com/kkkiio/pi-advisor">kkkiio/pi-advisor</a></td><td>Peer agent</td><td>0</td><td>✓</td><td>✓</td><td>✓</td><td>review/guide</td></tr>
+<tr><td><a href="https://github.com/philipbrembeck/pi-advisor">philipbrembeck/pi-advisor</a></td><td>Peer agent</td><td>0</td><td>✓</td><td>✓</td><td>✓</td><td>gate rules</td></tr>
+<tr><td><a href="https://github.com/ribbons-digital/pi-advisor">ribbons-digital/pi-advisor</a></td><td>Auto-review</td><td>0</td><td>✓</td><td>✓</td><td>✗</td><td>active/deferred/stale</td></tr>
+<tr><td><a href="https://github.com/Hopsken/pi-advisor">Hopsken/pi-advisor</a></td><td>Auto-review</td><td>0</td><td>✗</td><td>✓</td><td>✗</td><td>nit/concern/blocker</td></tr>
+<tr><td><a href="https://github.com/hknet/pi-extensions">hknet/pi-advisor</a></td><td>On-demand</td><td>0</td><td>✓</td><td>opt-in</td><td>✓</td><td>auto-nudges</td></tr>
+<tr><td><a href="https://github.com/luongnv89/pi-extensions">luongnv89/advisor-pi</a></td><td>On-demand</td><td>0</td><td>✗</td><td>✗</td><td>✗</td><td>tool only</td></tr>
+</tbody>
+</table>
+
+<div class="section-label">Decision criteria</div>
+
+<div class="card accent">
+<div class="card-title">If you want silent continuous QA</div>
+<p>Choose <strong>pasky/pi-omplike-advisor</strong>. Best maturity, published on pi.dev, self-compacting context, graded severity with re-confirmation logic.</p>
+</div>
+
+<div class="card accent">
+<div class="card-title">If you want to interrogate the advisor directly</div>
+<p>Choose <strong>kkkiio/pi-advisor</strong>. Overlay UI is unique. You can ask the advisor questions independently while executor works.</p>
+</div>
+
+<div class="card accent">
+<div class="card-title">If you want minimal overhead</div>
+<p>Choose <strong>RimuruW/pi-advisor</strong>. On-demand tool, zero cost when not called. Good first try before committing to persistent review.</p>
+</div>
+
+<div class="card accent">
+<div class="card-title">If you want maximum configurability</div>
+<p>Choose <strong>philipbrembeck/pi-advisor</strong>. Context slider, per-gate controls, manual parallel consultations, response collapsing.</p>
+</div>
+</section>
+
+<!-- TAB: Decisions -->
+<section id="tab-decisions" class="tab-panel" role="tabpanel">
+<div class="section-label">Recommendation</div>
+
+<div class="card accent">
+<div class="card-title">Primary recommendation: pasky/pi-omplike-advisor</div>
+<p>Best balance of continuous review and maturity. Installed via <code>pi install npm:pi-omplike-advisor</code>, published on pi.dev, 7 stars.</p>
+<ul>
+<li>Persistent turn-by-turn review</li>
+<li>Graded severity: nits delivered immediately, concerns/blockers held and re-confirmed</li>
+<li>Self-compacting context — doesn't fail when session gets long</li>
+<li>Read-only — advisor can't mutate files</li>
+</ul>
+</div>
+
+<div class="card info">
+<div class="card-title">Alternative: kkkiio/pi-advisor</div>
+<p>If you want the ability to directly chat with the advisor while the executor works. Overlay UI is unique across all implementations.</p>
+</div>
+
+<div class="card info">
+<div class="card-title">Lightweight entry: RimuruW/pi-advisor</div>
+<p>If you want to try the concept with zero overhead. On-demand tool — advisor only runs when executor calls it.</p>
+</div>
+
+<div class="section-label">What to avoid</div>
+
+<div class="finding finding--medium"><span class="badge">Caution</span>Path-load-only extensions (Hopsken/pi-advisor, luongnv89/advisor-pi) — harder to update, not discoverable on pi.dev</div>
+<div class="finding finding--low"><span class="badge">Note</span>Extensions with 0 stars and no npm publish — unmaintained risk</div>
+
+<details class="disclosure">
+<summary>Why not the heaviest option?</summary>
+<div class="content">
+<p>Full peer agents (philipbrembeck, kkkiio) are powerful but expensive — two full agents running. Start with persistent review (pasky) and only graduate to peer agents if you find you need direct advisor interrogation.</p>
+</div>
+</details>
+</section>
+
+<!-- TAB: Reference -->
+<section id="tab-reference" class="tab-panel" role="tabpanel">
+<div class="section-label">All extensions — direct links</div>
+
+<table>
+<thead><tr><th>Extension</th><th>GitHub</th><th>Install command</th></tr></thead>
+<tbody>
+<tr><td>pasky/pi-omplike-advisor</td><td><a href="https://github.com/pasky/pi-omplike-advisor">github.com/pasky/pi-omplike-advisor</a></td><td><code>pi install npm:pi-omplike-advisor</code></td></tr>
+<tr><td>RimuruW/pi-advisor</td><td><a href="https://github.com/RimuruW/pi-advisor">github.com/RimuruW/pi-advisor</a></td><td><code>pi install npm:pi-advisor</code></td></tr>
+<tr><td>kkkiio/pi-advisor</td><td><a href="https://github.com/kkkiio/pi-advisor">github.com/kkkiio/pi-advisor</a></td><td><code>pi install npm:@kkkiio/pi-advisor</code></td></tr>
+<tr><td>philipbrembeck/pi-advisor</td><td><a href="https://github.com/philipbrembeck/pi-advisor">github.com/philipbrembeck/pi-advisor</a></td><td><code>pi install npm:pi-advisor-flow</code></td></tr>
+<tr><td>ribbons-digital/pi-advisor</td><td><a href="https://github.com/ribbons-digital/pi-advisor">github.com/ribbons-digital/pi-advisor</a></td><td><code>pi install npm:@ribbons-digital/pi-advisor</code></td></tr>
+<tr><td>hknet/pi-advisor</td><td><a href="https://github.com/hknet/pi-extensions">github.com/hknet/pi-extensions</a></td><td><code>pi install npm:@hk_net/pi-advisor</code></td></tr>
+<tr><td>Hopsken/pi-advisor</td><td><a href="https://github.com/Hopsken/pi-advisor">github.com/Hopsken/pi-advisor</a></td><td>Path-load only</td></tr>
+<tr><td>luongnv89/advisor-pi</td><td><a href="https://github.com/luongnv89/pi-extensions">github.com/luongnv89/pi-extensions</a></td><td>Manual copy</td></tr>
+</tbody>
+</table>
+
+<div class="section-label">Glossary</div>
+
+<div class="card">
+<div class="card-title">Terms used</div>
+<ul>
+<li><strong>Executor:</strong> The primary agent doing the work</li>
+<li><strong>Advisor:</strong> The secondary model providing review/guidance</li>
+<li><strong>Turn:</strong> One complete agent response cycle</li>
+<li><strong>Delta:</strong> The new content since the last review</li>
+<li><strong>Nit:</strong> Low-severity suggestion (style, minor improvement)</li>
+<li><strong>Concern:</strong> Medium-severity issue (wrong assumption, potential bug)</li>
+<li><strong>Blocker:</strong> High-severity issue (data loss risk, security, wrong path)</li>
+</ul>
+</div>
+
+<details class="disclosure">
+<summary>Pattern 2 severity delivery semantics (pasky)</summary>
+<div class="content">
+<ul>
+<li><strong>Nit:</strong> Delivered immediately, steered into conversation</li>
+<li><strong>Concern/Blocker:</strong> Held on first emission (review is async, usually stale by delivery time). Re-confirmed by next review cycle. Only delivered if still valid.</li>
+</ul>
+</div>
+</details>
+
+<details class="disclosure">
+<summary>Self-compaction (why it matters)</summary>
+<div class="content">
+<p>Advisor agents accumulate context over time. Without compaction, they fail when their context window fills. Self-compacting advisors clear their history and replay the current turn into a fresh context — so long sessions keep getting reviewed.</p>
+</div>
+</details>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+const tabs=document.querySelectorAll('.tab-btn');
+const panels=document.querySelectorAll('.tab-panel');
+tabs.forEach(btn=>{
+btn.addEventListener('click',()=>{
+const target=btn.getAttribute('data-tab');
+tabs.forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false')});
+panels.forEach(p=>p.classList.remove('active'));
+btn.classList.add('active');
+btn.setAttribute('aria-selected','true');
+document.getElementById(target).classList.add('active');
+});
+});
+});
+</script>
+
+</body>
+</html>
