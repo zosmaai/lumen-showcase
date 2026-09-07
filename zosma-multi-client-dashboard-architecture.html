@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#6366f1">
+<title>Zosma Multi-Client Dashboard — Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d0f14; --surface:#141821; --surface2:#1b2029; --line:#252b37;
+    --text:#e6e9ef; --text-dim:#aab2c0; --text-muted:#6b7482;
+    --accent:#818cf8; --accent-dim:#6366f1;
+    --cyan:#22d3ee; --amber:#fbbf24; --purple:#a78bfa; --green:#34d399; --red:#f87171;
+  }
+  [data-theme="light"]{
+    --bg:#f7f8fa; --surface:#ffffff; --surface2:#f1f3f7; --line:#e2e6ee;
+    --text:#1a1f28; --text-dim:#3f4756; --text-muted:#7a8391; --accent:#6366f1; --accent-dim:#4f46e5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.86em}
+  a{color:var(--accent)}
+  .topnav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:.7rem 1.25rem}
+  .nav-title{font-weight:700;letter-spacing:-.01em;font-size:.95rem;color:var(--text-dim)}
+  .tabs{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.6rem}
+  .tab-btn{font:inherit;font-size:.9rem;font-weight:600;color:var(--text-muted);background:transparent;border:0;border-radius:7px;padding:.4rem .8rem;cursor:pointer;transition:color .15s,background .15s}
+  .tab-btn:hover{color:var(--text-dim);background:var(--surface)}
+  .tab-btn.active{color:var(--accent);background:var(--surface)}
+  .panel{display:none;padding:2.25rem 1.5rem;max-width:1040px;margin:0 auto}
+  .panel.active{display:block;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .hero{border-left:4px solid var(--accent);padding:.4rem 0 .4rem 1.25rem;margin-bottom:2rem}
+  .eyebrow{color:var(--accent);font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+  .hero h1{font-size:2rem;font-weight:800;letter-spacing:-.02em;margin:.35rem 0 .5rem}
+  .lede{font-size:1.06rem;color:var(--text-dim);max-width:66ch;margin:0}
+  h2{font-size:1.35rem;font-weight:700;letter-spacing:-.01em;margin:2.4rem 0 .5rem}
+  h2:first-of-type{margin-top:.5rem}
+  h3{font-size:1.05rem;font-weight:600;margin:1.5rem 0 .4rem}
+  p{color:var(--text-dim);margin:.6rem 0}
+  ul{color:var(--text-dim);padding-left:1.15rem}
+  li{margin:.3rem 0}
+  .sub{color:var(--text-muted);font-size:.9rem}
+  .diag{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin:1.25rem 0;display:block}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin:1.25rem 0}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.85rem 1rem}
+  .stat .n{font-size:1.5rem;font-weight:800;letter-spacing:-.02em}
+  .stat .l{color:var(--text-muted);font-size:.8rem;margin-top:.15rem}
+  .idx{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.75rem;margin:1rem 0}
+  .idx a{display:block;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.85rem 1rem;text-decoration:none;transition:border-color .15s}
+  .idx a:hover{border-color:var(--accent)}
+  .idx .t{font-weight:700;color:var(--text)}
+  .idx .d{color:var(--text-muted);font-size:.85rem;margin-top:.2rem}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:1.15rem 1.3rem;margin:1rem 0}
+  .card.accent{border-left:3px solid var(--accent)}
+  .card h3{margin-top:0}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .col{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:1rem 1.15rem}
+  .col h4{margin:0 0 .5rem;font-size:.95rem}
+  .col.good{border-color:rgba(52,211,153,.5)}
+  .col.bad{border-color:rgba(248,113,113,.4)}
+  .col h4.good{color:var(--green)}
+  .col h4.bad{color:var(--red)}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-dim);background:var(--surface2);border:1px solid var(--line);border-radius:5px;padding:.15rem .45rem;margin:.15rem .25rem .15rem 0}
+  .dot{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;margin-right:.4rem;vertical-align:middle}
+  .why{color:var(--text-dim);font-size:.95rem;margin-top:.7rem;padding:.8rem 1rem;background:var(--surface2);border:1px solid var(--line);border-radius:8px}
+  .why b{color:var(--text)}
+  .principles{list-style:none;padding:0;margin:.75rem 0}
+  .principles li{padding:.55rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:8px;border-left:3px solid var(--accent);color:var(--text-dim)}
+  .principles li b{color:var(--text)}
+  .foot{max-width:1040px;margin:1rem auto 3rem;padding:0 1.5rem;color:var(--text-muted);font-size:.82rem}
+  .theme-btn{position:fixed;bottom:1rem;right:1rem;z-index:30;font:inherit;font-size:.8rem;color:var(--text-dim);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:.4rem .7rem;cursor:pointer}
+  @media(max-width:720px){.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <span class="nav-title">Zosma Multi-Client Dashboard · Architecture</span>
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" role="tab" data-tab="overview">Overview</button>
+    <button class="tab-btn" role="tab" data-tab="architecture">Architecture</button>
+    <button class="tab-btn" role="tab" data-tab="routing">Routing</button>
+    <button class="tab-btn" role="tab" data-tab="deployment">Deployment</button>
+    <button class="tab-btn" role="tab" data-tab="decisions">Decisions</button>
+    <button class="tab-btn" role="tab" data-tab="mental">Mental Model</button>
+  </div>
+</nav>
+
+<!-- OVERVIEW -->
+<section class="panel active" data-panel="overview" role="tabpanel">
+  <div class="hero">
+    <div class="eyebrow">Architecture · Dashboard Platform</div>
+    <h1>Many dashboards, one foundation</h1>
+    <p class="lede">Zosma ships <b>separate dashboard applications</b> per client. They share a common UI/platform foundation but never share application code. Each is independently customizable, buildable, and deployable.</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="n">N</div><div class="l">real dashboard apps (one per client)</div></div>
+    <div class="stat"><div class="n">7</div><div class="l">shared foundation packages</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">core principle — share foundation, not app</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">deployment routing options</div></div>
+  </div>
+
+  <h2>What this is <span class="sub">(and what it isn't)</span></h2>
+  <div class="cols">
+    <div class="col good"><h4 class="good">✅ Goal</h4>
+      <p style="color:var(--text-dim)">Multiple <b>real</b> Next.js dashboard apps that share a monorepo foundation. Client A, B, C each get their own application.</p>
+    </div>
+    <div class="col bad"><h4 class="bad">❌ Not this</h4>
+      <p style="color:var(--text-dim)">One dashboard with tenant-specific configuration branches. Not a modular monolith with per-client folders.</p>
+    </div>
+  </div>
+
+  <div class="diag">
+    <svg viewBox="0 0 900 340" role="img" aria-label="Platform foundation with three independent client apps">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+      </defs>
+      <rect x="30" y="14" width="840" height="60" rx="10" fill="none" stroke="var(--accent)" stroke-width="1.5" opacity=".6"/>
+      <text x="450" y="50" text-anchor="middle" font-family="IBM Plex Mono" font-size="15" font-weight="700" fill="var(--accent)">ZOSMA DASHBOARD PLATFORM — shared foundation</text>
+      <rect x="30" y="96" width="840" height="52" rx="8" fill="var(--surface2)" stroke="var(--line)"/>
+      <text x="45" y="127" font-family="IBM Plex Mono" font-size="13" fill="var(--text-dim)">Shared Zosma Packages</text>
+      <text x="760" y="127" text-anchor="end" font-family="IBM Plex Mono" font-size="12" fill="var(--text-muted)">@zosma/ui · charts · forms · shell · auth · api-client · analytics</text>
+
+      <line x1="220" y1="148" x2="220" y2="180" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="450" y1="148" x2="450" y2="180" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="680" y1="148" x2="680" y2="180" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+      <rect x="90" y="182" width="260" height="120" rx="10" fill="rgba(34,211,238,.08)" stroke="var(--cyan)"/>
+      <text x="220" y="212" text-anchor="middle" font-family="IBM Plex Sans" font-size="16" font-weight="700" fill="var(--cyan)">Client A — Next.js</text>
+      <text x="220" y="240" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="var(--text-dim)">Overview · Projects · Reports</text>
+      <text x="220" y="258" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="var(--text-muted)">+ Client-A-specific features</text>
+
+      <rect x="320" y="182" width="260" height="120" rx="10" fill="rgba(167,139,250,.08)" stroke="var(--purple)"/>
+      <text x="450" y="212" text-anchor="middle" font-family="IBM Plex Sans" font-size="16" font-weight="700" fill="var(--purple)">Client B — Next.js</text>
+      <text x="450" y="240" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="var(--text-dim)">Overview · Fleet · Operations</text>
+      <text x="450" y="258" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="var(--text-muted)">+ Client-B-specific features</text>
+
+      <rect x="550" y="182" width="260" height="120" rx="10" fill="rgba(251,191,36,.08)" stroke="var(--amber)"/>
+      <text x="680" y="212" text-anchor="middle" font-family="IBM Plex Sans" font-size="16" font-weight="700" fill="var(--amber)">Client C — Next.js</text>
+      <text x="680" y="240" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="var(--text-dim)">Overview · Billing · Analytics</text>
+      <text x="680" y="258" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="var(--text-muted)">+ Client-C-specific features</text>
+    </svg>
+  </div>
+
+  <div class="why"><b>Share the foundation, not the application.</b> A change to Client A's app never requires touching Client B's. A change to <code>@zosma/ui</code> flows to clients through normal package versioning — deliberately, not by accident.</div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="panel" data-panel="architecture" role="tabpanel">
+  <div class="hero"><div class="eyebrow">Architecture</div><h1>Next.js Multi-Zones in a monorepo</h1><p class="lede">A "zone" is an independently deployed Next.js app. Each client dashboard is its own zone. Applications <b>share packages</b> but never <b>share app code</b>.</p></div>
+
+  <h2>Monorepo layout</h2>
+  <div class="card">
+    <pre style="margin:0;font-size:.85rem;color:var(--text-dim);overflow-x:auto"><code>zosma-dashboard/
+│
+├── apps/
+│   ├── client-a/        ← independent Next.js app
+│   ├── client-b/        ← independent Next.js app
+│   └── client-c/        ← independent Next.js app
+│
+├── packages/
+│   ├── ui/              ← @zosma/ui  (Card, DataTable, Button…)
+│   ├── charts/          ← @zosma/charts
+│   ├── forms/           ← @zosma/forms
+│   ├── dashboard-shell/ ← @zosma/dashboard-shell
+│   ├── auth/            ← @zosma/auth
+│   ├── api-client/      ← @zosma/api-client
+│   └── analytics/       ← @zosma/analytics
+│
+├── package.json
+├── pnpm-workspace.yaml
+└── turbo.json</code></pre>
+  </div>
+
+  <h2>How shared code is consumed</h2>
+  <div class="cols">
+    <div class="col"><h4>Foundation</h4>
+      <pre style="margin:0;font-size:.82rem;color:var(--text-dim);overflow-x:auto"><code>import { Card, DataTable, Button } from "@zosma/ui";</code></pre>
+    </div>
+    <div class="col"><h4>Client builds on top</h4>
+      <pre style="margin:0;font-size:.82rem;color:var(--text-dim);overflow-x:auto"><code>// client-a
+Overview → Projects → Reports → custom</code></pre>
+    </div>
+  </div>
+
+  <h2>Why not one huge Next.js app?</h2>
+  <p>A modular monolith (<code>apps/dashboard/client-a/…</code>) is simpler at first, but as clients diverge it rot:</p>
+  <div class="stat-grid">
+    <div class="stat"><div class="n">↔</div><div class="l">client code becomes coupled</div></div>
+    <div class="stat"><div class="n">↑</div><div class="l">build times grow with every client</div></div>
+    <div class="stat"><div class="n">⚠</div><div class="l">one deploy affects everyone</div></div>
+    <div class="stat"><div class="n">?</div><div class="l">ownership boundaries blur</div></div>
+  </div>
+  <p>Real application-level isolation (<code>apps/client-a</code>, <code>apps/client-b</code>) keeps <b>build → test → deploy</b> independent per client.</p>
+
+  <h2>Why not make everything a microfrontend?</h2>
+  <p>Low-level building blocks stay <b>shared packages</b>, not runtime-deployed microfrontends:</p>
+  <p><span class="tag">Button</span><span class="tag">Card</span><span class="tag">Modal</span><span class="tag">Table</span><span class="tag">Chart</span><span class="tag">DatePicker</span><span class="tag">Navigation</span><span class="tag">Auth utils</span><span class="tag">API client</span></p>
+  <p>Zone/microfrontend boundaries belong at the <b>application or major product-module</b> level — where independent deployment and ownership actually add value.</p>
+</section>
+
+<!-- ROUTING -->
+<section class="panel" data-panel="routing" role="tabpanel">
+  <div class="hero"><div class="eyebrow">Routing</div><h1>Composing apps into one experience</h1><p class="lede">Multi-Zones is about <b>how multiple apps are routed/composed</b> into a single web experience. Three deployment models.</p></div>
+
+  <div class="col good" style="margin-bottom:1rem"><h4 class="good">Option A — Path-based</h4>
+    <pre style="margin:.4rem 0 0;font-size:.82rem;color:var(--text-dim);overflow-x:auto"><code>zosma-dashboard.com/client-a/*
+zosma-dashboard.com/client-b/*
+zosma-dashboard.com/client-c/*</code></pre>
+    <ul style="margin:.4rem 0 0">
+      <li>✅ one domain, centralized branding, identity encoded in path</li>
+      <li>⚠ each app must work under a path prefix; assets/base paths need care; cross-zone nav is a hard navigation</li>
+    </ul>
+  </div>
+
+  <div class="col good" style="margin-bottom:1rem"><h4 class="good">Option B — Subdomain-based</h4>
+    <pre style="margin:.4rem 0 0;font-size:.82rem;color:var(--text-dim);overflow-x:auto"><code>client-a.zosma-dashboard.com
+client-b.zosma-dashboard.com
+client-c.zosma-dashboard.com</code></pre>
+    <ul style="margin:.4rem 0 0">
+      <li>✅ strong app boundary; each app owns <code>/</code>; clean identity/branding per client</li>
+      <li>⚠ DNS management; cookies/auth need deliberate design; more hostnames</li>
+    </ul>
+    <p style="margin:.5rem 0 0"><b style="color:var(--green)">Recommended default when clients are truly independent.</b></p>
+  </div>
+
+  <div class="col good"><h4 class="good">Option C — Customer-owned custom domains</h4>
+    <pre style="margin:.4rem 0 0;font-size:.82rem;color:var(--text-dim);overflow-x:auto"><code>dashboard.acme.com
+portal.globex.com</code></pre>
+    <ul style="margin:.4rem 0 0">
+      <li>✅ best white-label; client sees its own domain</li>
+      <li>⚠ DNS onboarding, TLS cert management, domain verification — operational complexity</li>
+    </ul>
+    <p style="margin:.5rem 0 0"><b style="color:var(--text-muted)">Add later; does not change the core app model.</b></p>
+  </div>
+
+  <h2>Routing layer concept</h2>
+  <div class="diag">
+    <svg viewBox="0 0 900 240" role="img" aria-label="Routing layer fan-out to three Next.js apps">
+      <defs>
+        <marker id="b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+      </defs>
+      <rect x="360" y="18" width="180" height="44" rx="8" fill="var(--surface2)" stroke="var(--line)"/>
+      <text x="450" y="45" text-anchor="middle" font-family="IBM Plex Sans" font-size="14" font-weight="700" fill="var(--text)">DNS / Edge / Load Balancer</text>
+      <line x1="330" y1="62" x2="270" y2="110" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#b1)"/>
+      <line x1="450" y1="62" x2="450" y2="110" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#b1)"/>
+      <line x1="570" y1="62" x2="630" y2="110" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#b1)"/>
+      <rect x="130" y="112" width="200" height="56" rx="10" fill="rgba(34,211,238,.08)" stroke="var(--cyan)"/>
+      <text x="230" y="138" text-anchor="middle" font-family="IBM Plex Sans" font-size="13.5" font-weight="700" fill="var(--cyan)">Client A</text>
+      <text x="230" y="156" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-dim)">Next.js · owns /</text>
+      <rect x="350" y="112" width="200" height="56" rx="10" fill="rgba(167,139,250,.08)" stroke="var(--purple)"/>
+      <text x="450" y="138" text-anchor="middle" font-family="IBM Plex Sans" font-size="13.5" font-weight="700" fill="var(--purple)">Client B</text>
+      <text x="450" y="156" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-dim)">Next.js · owns /</text>
+      <rect x="570" y="112" width="200" height="56" rx="10" fill="rgba(251,191,36,.08)" stroke="var(--amber)"/>
+      <text x="670" y="138" text-anchor="middle" font-family="IBM Plex Sans" font-size="13.5" font-weight="700" fill="var(--amber)">Client C</text>
+      <text x="670" y="156" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-dim)">Next.js · owns /</text>
+    </svg>
+  </div>
+</section>
+
+<!-- DEPLOYMENT -->
+<section class="panel" data-panel="deployment" role="tabpanel">
+  <div class="hero"><div class="eyebrow">Deployment</div><h1>Same pattern, any infra</h1><p class="lede">Next.js Multi-Zones is an <b>architectural pattern</b>, not a Vercel product. Each app is a normal Next.js deployment; only the routing/hosting layer differs.</p></div>
+
+  <div class="card accent">
+    <h3 style="margin-top:0">Vercel — one project per client</h3>
+    <p>Vercel's <b>Microfrontends</b> tooling can supply the routing/composition layer. Each client is a separate Vercel project. Core choice (independent apps) stays the same; Vercel just changes the hosting layer.</p>
+  </div>
+
+  <h2>GCP deployment</h2>
+  <div class="diag">
+    <svg viewBox="0 0 900 300" role="img" aria-label="GCP deployment: Cloud Load Balancer routing to three Cloud Run services">
+      <defs>
+        <marker id="c1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+      </defs>
+      <rect x="380" y="14" width="140" height="40" rx="8" fill="var(--surface2)" stroke="var(--line)"/>
+      <text x="450" y="40" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="700" fill="var(--text)">Internet</text>
+      <line x1="450" y1="54" x2="450" y2="78" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#c1)"/>
+      <rect x="320" y="80" width="260" height="44" rx="8" fill="var(--surface2)" stroke="var(--line)"/>
+      <text x="450" y="107" text-anchor="middle" font-family="IBM Plex Sans" font-size="13.5" font-weight="700" fill="var(--text)">GCP Cloud Load Balancer</text>
+      <text x="450" y="92" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--text-muted)">host/path routing</text>
+      <line x1="350" y1="124" x2="220" y2="168" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#c1)"/>
+      <line x1="450" y1="124" x2="450" y2="168" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#c1)"/>
+      <line x1="550" y1="124" x2="680" y2="168" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#c1)"/>
+      <rect x="100" y="170" width="240" height="90" rx="10" fill="rgba(34,211,238,.08)" stroke="var(--cyan)"/>
+      <text x="220" y="198" text-anchor="middle" font-family="IBM Plex Sans" font-size="14" font-weight="700" fill="var(--cyan)">Client A Cloud Run</text>
+      <text x="220" y="218" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-dim)">Next.js · /client-a/* or subdomain</text>
+      <rect x="330" y="170" width="240" height="90" rx="10" fill="rgba(167,139,250,.08)" stroke="var(--purple)"/>
+      <text x="450" y="198" text-anchor="middle" font-family="IBM Plex Sans" font-size="14" font-weight="700" fill="var(--purple)">Client B Cloud Run</text>
+      <text x="450" y="218" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-dim)">Next.js · /client-b/* or subdomain</text>
+      <rect x="560" y="170" width="240" height="90" rx="10" fill="rgba(251,191,36,.08)" stroke="var(--amber)"/>
+      <text x="680" y="198" text-anchor="middle" font-family="IBM Plex Sans" font-size="14" font-weight="700" fill="var(--amber)">Client C Cloud Run</text>
+      <text x="680" y="218" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-dim)">Next.js · /client-c/* or subdomain</text>
+    </svg>
+  </div>
+
+  <div class="why"><b>Vercel ≠ the architecture.</b> The idea is just <b>multiple Next.js apps + routing between them</b>. Same pattern runs on Vercel, GCP, AWS, Cloudflare, Kubernetes, or nginx. Vercel only adds managed microfrontend tooling.</div>
+</section>
+
+<!-- DECISIONS -->
+<section class="panel" data-panel="decisions" role="tabpanel">
+  <div class="hero"><div class="eyebrow">Decisions</div><h1>Multi-Zones vs Module Federation</h1><p class="lede">Choose the composition boundary that matches reality. Zosma has many <b>separate</b> client dashboards — that's an application/route-level concern, not a runtime component one.</p></div>
+
+  <div class="cols">
+    <div class="col good"><h4 class="good">✅ Multi-Zones (fits Zosma)</h4>
+      <p style="color:var(--text-dim)">Each app <b>owns its routes</b>. Composition at the application/route level. Each client is an independent dashboard — this matches.</p>
+      <pre style="margin:.5rem 0 0;font-size:.8rem;color:var(--text-dim);overflow-x:auto"><code>App A → owns routes A
+App B → owns routes B</code></pre>
+    </div>
+    <div class="col"><h4>◻ Module Federation</h4>
+      <p style="color:var(--text-dim)">Runtime <b>component-level</b> composition: a host dynamically loads remote components. Useful when one app assembles independently deployed modules. Not needed just because there are many dashboards.</p>
+      <pre style="margin:.5rem 0 0;font-size:.8rem;color:var(--text-dim);overflow-x:auto"><code>host → loads remote A
+host → loads remote B
+host → loads remote C</code></pre>
+    </div>
+  </div>
+
+  <h2>Next.js implementation checklist</h2>
+  <div class="card">
+    <ul>
+      <li><b>Routing:</b> decide path-based, hostname-based, or both.</li>
+      <li><b>Base paths:</b> for path-based zones, ensure the app handles its prefix correctly.</li>
+      <li><b>Cross-zone navigation:</b> it's a hard navigation, not a client-side transition. Intra-app nav stays normal.</li>
+      <li><b>Auth:</b> shared across apps, isolated per client, or central IdP. Don't assume cookies/session work across unrelated domains.</li>
+      <li><b>Shared UI versions:</b> a client must not break because <code>@zosma/ui</code> changed. Manage via package versioning.</li>
+      <li><b>Independent deploy:</b> <code>build → test → deploy</code> per client, no other client in the path.</li>
+    </ul>
+  </div>
+
+  <div class="why"><b>Prefer current Next.js App Router docs</b> over older tutorials based on Next 12–14 or legacy React/Module Federation examples.</div>
+</section>
+
+<!-- MENTAL MODEL -->
+<section class="panel" data-panel="mental" role="tabpanel">
+  <div class="hero"><div class="eyebrow">Mental Model</div><h1>The summary to hold in your head</h1><p class="lede">Six statements that capture the whole architecture.</p></div>
+
+  <div class="diag">
+    <svg viewBox="0 0 900 300" role="img" aria-label="Final mental model: platform foundation over independent client apps">
+      <defs>
+        <marker id="d1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+      </defs>
+      <rect x="330" y="14" width="240" height="46" rx="10" fill="var(--surface2)" stroke="var(--accent)" stroke-width="1.5"/>
+      <text x="450" y="43" text-anchor="middle" font-family="IBM Plex Sans" font-size="15" font-weight="800" fill="var(--accent)">ZOSMA PLATFORM</text>
+      <line x1="450" y1="60" x2="450" y2="90" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#d1)"/>
+      <rect x="300" y="92" width="300" height="40" rx="8" fill="var(--surface2)" stroke="var(--line)"/>
+      <text x="450" y="118" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="var(--text-dim)">Shared foundation · Infrastructure: routing / DNS</text>
+      <line x1="330" y1="132" x2="220" y2="172" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#d1)"/>
+      <line x1="450" y1="132" x2="450" y2="172" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#d1)"/>
+      <line x1="570" y1="132" x2="680" y2="172" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#d1)"/>
+      <rect x="110" y="174" width="220" height="90" rx="10" fill="rgba(34,211,238,.08)" stroke="var(--cyan)"/>
+      <text x="220" y="200" text-anchor="middle" font-family="IBM Plex Sans" font-size="14" font-weight="700" fill="var(--cyan)">Client A</text>
+      <text x="220" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-dim)">Next.js</text>
+      <text x="220" y="240" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-muted)">custom code</text>
+      <rect x="340" y="174" width="220" height="90" rx="10" fill="rgba(167,139,250,.08)" stroke="var(--purple)"/>
+      <text x="450" y="200" text-anchor="middle" font-family="IBM Plex Sans" font-size="14" font-weight="700" fill="var(--purple)">Client B</text>
+      <text x="450" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-dim)">Next.js</text>
+      <text x="450" y="240" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-muted)">custom code</text>
+      <rect x="570" y="174" width="220" height="90" rx="10" fill="rgba(251,191,36,.08)" stroke="var(--amber)"/>
+      <text x="680" y="200" text-anchor="middle" font-family="IBM Plex Sans" font-size="14" font-weight="700" fill="var(--amber)">Client C</text>
+      <text x="680" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-dim)">Next.js</text>
+      <text x="680" y="240" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--text-muted)">custom code</text>
+    </svg>
+  </div>
+
+  <ul class="principles">
+    <li><b>Shared code ≠ shared application.</b></li>
+    <li><b>Separate apps ≠ separate domains.</b></li>
+    <li><b>Multi-Zones ≠ Vercel.</b></li>
+    <li><b>Vercel = managed tooling for the same architecture.</b></li>
+    <li><b>GCP can implement the routing layer independently.</b></li>
+    <li><b>Don't add Module Federation until runtime component composition is a real need.</b></li>
+  </ul>
+
+  <h2>Recommended starting point</h2>
+  <div class="card accent">
+    <p>Start with <b>Option 1 (subdomain)</b> — <code>client-a.zosma-dashboard.com</code> — when dashboards are truly separate apps. Use <b>path-based</b> if a single canonical domain matters more. Add <b>customer-owned domains</b> when white-label becomes important.</p>
+    <p class="sub">References: <a href="https://nextjs.org/docs/app/guides/multi-zones" target="_blank">Next.js Multi-Zones</a> · <a href="https://vercel.com/docs/microfrontends/quickstart" target="_blank">Vercel Microfrontends</a></p>
+  </div>
+</section>
+
+<div class="foot">Zosma Multi-Client Dashboard Architecture · built as a single-file Lumen presentation. Inline SVG diagrams, no external assets beyond fonts.</div>
+
+<button class="theme-btn" id="themeBtn">Toggle light/dark</button>
+
+<script>
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      document.querySelector('[data-panel="'+btn.dataset.tab+'"]').classList.add('active');
+    });
+  });
+  const root=document.documentElement;
+  const isDark=localStorage.getItem('theme')!=='light' && root.getAttribute('data-theme')==='dark';
+  const btn=document.getElementById('themeBtn');
+  btn.addEventListener('click',()=>{
+    if(root.getAttribute('data-theme')==='dark'){root.setAttribute('data-theme','light');localStorage.setItem('theme','light');}
+    else{root.setAttribute('data-theme','dark');localStorage.removeItem('theme');}
+  });
+</script>
+</body>
+</html>
